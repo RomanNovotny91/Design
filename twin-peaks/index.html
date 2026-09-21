@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="Twin Peaks: Ztracená kazeta — krátká point-and-click adventura.">
+<title>Twin Peaks: Ztracená kazeta</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #08090a; color: #8d9aa0;
+    font-family: "Courier New", ui-monospace, monospace;
+    overflow: hidden; overscroll-behavior: none;
+  }
+  #stage {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 40%, #14100e 0%, #08090a 70%);
+  }
+  #stage { flex-direction: column; gap: 14px; }
+  #rotate { display: none; margin: 0; font-size: 12px; color: #6d5f4e; letter-spacing: 0.04em; }
+  @media (orientation: portrait) and (max-width: 820px) { #rotate { display: block; } }
+  canvas#game {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    display: block;
+    touch-action: none;
+    cursor: pointer;
+    box-shadow: 0 0 0 1px #2a231d, 0 12px 48px rgba(0,0,0,0.7);
+    background: #000;
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="game" width="640" height="360"></canvas>
+    <p id="rotate">otoč telefon na šířku</p>
+  </div>
+
+  <!-- obsah: data odděleně od kódu -->
+  <script src="assets/manifest.js"></script>
+  <script src="src/data/actors.js"></script>
+  <script src="src/data/items.js"></script>
+  <script src="src/data/dialogues.js"></script>
+
+  <!-- engine -->
+  <script src="src/engine/util.js"></script>
+  <script src="src/engine/assets.js"></script>
+  <script src="src/engine/audio.js"></script>
+  <script src="src/engine/state.js"></script>
+  <script src="src/engine/script.js"></script>
+  <script src="src/engine/dialogue.js"></script>
+  <script src="src/engine/render.js"></script>
+  <script src="src/engine/screens.js"></script>
+
+  <!-- data, která používají logiku hádanek -->
+  <script src="src/data/puzzles.js"></script>
+  <script src="src/data/rooms.js"></script>
+
+  <script src="src/engine/game.js"></script>
+</body>
+</html>
