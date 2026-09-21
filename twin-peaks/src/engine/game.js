@@ -515,6 +515,7 @@
           if (d.shape) R.shape(ctx, d.shape);
           else R.actor(ctx, d.def, d.x, d.y, this.scaleAt(d.y) * d.sc, d.facing, d.phase, d.sitting);
         });
+        R.atmosphere(ctx, room);
         R.layer(ctx, room.art, true, !!(room.bg && TP.assets.img(room.bg)));
       }
 

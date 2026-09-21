@@ -13,80 +13,146 @@
     /* =========================== DOUBLE R DINER =========================== */
     diner: {
       id: 'diner', name: 'Double R Diner', bg: 'bg_diner', music: 'diner',
-      start: [330, 292], walk: [[26, 274], [612, 274], [620, 308], [22, 308]],
+      start: [330, 292], walk: [[84, 274], [612, 274], [620, 308], [80, 308]],
       scale: [274, 0.88, 308, 1.06],
+      atmo: {
+        lights: [[140, 60, 170, '255,214,150', 0.26], [534, 60, 150, '224,72,72', 0.12], [330, 210, 220, '255,206,140', 0.12]],
+        wash: 'rgba(70,34,10,0.10)', vignette: 0.44,
+      },
       art: [
+        /* --- stěna a obklad --- */
         { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#2a231d' },
-        { t: 'grad', x: 0, y: 0, w: 640, h: 160, c1: CREAM, c2: '#a89272' },
-        { t: 'rect', x: 0, y: 156, w: 640, h: 6, c: '#e8dcc0' },
-        { t: 'rect', x: 0, y: 162, w: 640, h: 78, c: RED },
-        { t: 'stripes', x: 0, y: 162, w: 640, h: 78, c: 'rgba(0,0,0,0.10)', gap: 16, thick: 3 },
-        /* okno do mlhy */
-        { t: 'rect', x: 26, y: 32, w: 186, h: 112, c: WOOD_D },
-        { t: 'grad', x: 31, y: 37, w: 176, h: 102, c1: '#9aa7ab', c2: '#cfd6d2' },
-        { t: 'trees', x: 31, y: 76, w: 176, h: 63, c: '#1b2f1f', c2: '#14241a', n: 7, tw: 30 },
-        { t: 'rect', x: 116, y: 37, w: 4, h: 102, c: WOOD_D },
-        { t: 'rect', x: 31, y: 86, w: 176, h: 3, c: WOOD_D },
-        /* neon */
-        { t: 'rect', x: 452, y: 36, w: 166, h: 54, c: '#221c18' },
-        { t: 'rect', x: 456, y: 40, w: 158, h: 46, c: '#171310' },
-        { t: 'text', x: 535, y: 46, s: 'DOUBLE R', c: '#d02b2b', size: 16, bold: true, align: 'center' },
-        { t: 'text', x: 535, y: 68, s: 'D I N E R', c: '#f0c060', size: 9, align: 'center' },
-        /* lednička s dětskou kresbou */
-        { t: 'rect', x: 56, y: 150, w: 62, h: 88, c: '#b9bdb6' },
-        { t: 'rect', x: 56, y: 150, w: 62, h: 4, c: '#8f938d' },
-        { t: 'rect', x: 110, y: 186, w: 4, h: 18, c: '#6d716c' },
-        { t: 'rect', x: 66, y: 168, w: 30, h: 26, c: '#efe7d8' },
-        { t: 'line', x1: 70, y1: 188, x2: 92, y2: 188, c: '#4a5257', w: 1 },
-        { t: 'ell', x: 76, y: 180, rx: 5, ry: 4, c: '#8a5f33' },
-        { t: 'line', x1: 84, y1: 180, x2: 90, y2: 176, c: '#8a5f33', w: 1 },
-        /* police a hrnky */
-        { t: 'rect', x: 210, y: 148, w: 210, h: 6, c: WOOD },
-        { t: 'rect', x: 222, y: 136, w: 12, h: 12, c: '#d9dcdb' },
-        { t: 'rect', x: 244, y: 136, w: 12, h: 12, c: '#d9dcdb' },
-        { t: 'rect', x: 266, y: 136, w: 12, h: 12, c: '#d9dcdb' },
-        { t: 'rect', x: 300, y: 130, w: 44, h: 18, c: '#4a5257' },
-        { t: 'text', x: 322, y: 134, s: 'CENY', c: '#c9b26a', size: 7, align: 'center' },
-        /* kávovar */
-        { t: 'rect', x: 120, y: 190, w: 44, h: 48, c: '#4a5257' },
-        { t: 'rect', x: 126, y: 196, w: 32, h: 14, c: '#2a2f33' },
-        { t: 'rect', x: 128, y: 214, w: 20, h: 22, c: '#1d1713' },
-        { t: 'rect', x: 128, y: 220, w: 20, h: 14, c: '#3a2016' },
-        /* vitrína s koláči */
-        { t: 'rect', x: 324, y: 190, w: 72, h: 48, c: '#8f959a', alpha: 0.5 },
-        { t: 'rect', x: 324, y: 190, w: 72, h: 4, c: '#6d716c' },
-        { t: 'poly', pts: [[334, 232], [352, 206], [370, 232]], c: '#a81c22' },
-        { t: 'poly', pts: [[356, 232], [372, 210], [388, 232]], c: '#7e1218' },
-        { t: 'rect', x: 324, y: 232, w: 72, h: 6, c: '#c9903a' },
-        /* pult */
-        { t: 'rect', x: 0, y: 236, w: 528, h: 16, c: '#8a7053', z: 272 },
-        { t: 'rect', x: 0, y: 236, w: 528, h: 3, c: '#a98c67', z: 272 },
-        { t: 'rect', x: 0, y: 252, w: 528, h: 18, c: '#6b4a3a', z: 272 },
-        { t: 'stripes', x: 0, y: 252, w: 528, h: 18, c: 'rgba(0,0,0,0.18)', gap: 24, thick: 2, z: 272 },
-        { t: 'rect', x: 0, y: 268, w: 528, h: 4, c: WOOD_D, z: 272 },
-        /* barové stoličky */
-        { t: 'rect', x: 292, y: 282, w: 8, h: 26, c: '#4a5257', z: 281 },
-        { t: 'ell', x: 296, y: 282, rx: 15, ry: 5, c: '#8c4a52', z: 281 },
-        { t: 'rect', x: 348, y: 282, w: 8, h: 26, c: '#4a5257', z: 281 },
-        { t: 'ell', x: 352, y: 282, rx: 15, ry: 5, c: '#8c4a52', z: 281 },
-        { t: 'rect', x: 404, y: 282, w: 8, h: 26, c: '#4a5257', z: 281 },
-        { t: 'ell', x: 408, y: 282, rx: 15, ry: 5, c: '#8c4a52', z: 281 },
-        /* dveře ven */
-        { t: 'rect', x: 560, y: 132, w: 68, h: 140, c: WOOD },
-        { t: 'rect', x: 566, y: 140, w: 56, h: 74, c: '#9aa7ab' },
-        { t: 'rect', x: 566, y: 218, w: 56, h: 46, c: WOOD_D },
-        { t: 'ell', x: 572, y: 208, rx: 3, ry: 3, c: '#f0c060' },
-        /* podlaha */
-        { t: 'checker', x: 0, y: 272, w: 640, h: 44, c1: '#d3d6d2', c2: '#2a231d', size: 16 },
-        { t: 'checker', x: 528, y: 236, w: 112, h: 40, c1: '#d3d6d2', c2: '#2a231d', size: 16 },
-        /* věci na pultu (mizí, když je vezmu) */
-        { t: 'rect', x: 444, y: 224, w: 28, h: 12, c: '#4a5257', if: { not: 'diktafonVzat' }, z: 273 },
+        { t: 'plaster', x: 0, y: 0, w: 640, h: 164, c: '#c4ad87', n: 46 },
+        { t: 'grad', x: 0, y: 0, w: 640, h: 70, c1: 'rgba(40,24,10,0.30)', c2: 'rgba(40,24,10,0)' },
+        { t: 'rect', x: 0, y: 156, w: 640, h: 7, c: '#e2d3ae', b: true },
+        { t: 'rect', x: 0, y: 163, w: 640, h: 77, c: '#7e4249' },
+        { t: 'stripes', x: 0, y: 163, w: 640, h: 77, c: 'rgba(0,0,0,0.13)', gap: 15, thick: 3 },
+        { t: 'stripes', x: 4, y: 163, w: 640, h: 77, c: 'rgba(255,220,200,0.05)', gap: 15, thick: 1 },
+        { t: 'rect', x: 0, y: 236, w: 640, h: 5, c: '#4a2b2e' },
+
+        /* --- okno do mlhy --- */
+        { t: 'rect', x: 22, y: 28, w: 194, h: 120, c: '#4a3b2b', b: true },
+        { t: 'rect', x: 28, y: 34, w: 182, h: 108, c: '#2f251d' },
+        { t: 'grad', x: 31, y: 37, w: 176, h: 102, c1: '#93a2a6', c2: '#d2d8d2' },
+        { t: 'trees', x: 31, y: 74, w: 176, h: 65, c: '#1b2f1f', c2: '#14241a', n: 7, tw: 30 },
+        { t: 'grad', x: 31, y: 104, w: 176, h: 35, c1: 'rgba(206,214,208,0)', c2: 'rgba(206,214,208,0.45)' },
+        { t: 'rect', x: 116, y: 34, w: 5, h: 108, c: '#4a3b2b', b: true },
+        { t: 'rect', x: 28, y: 84, w: 182, h: 4, c: '#4a3b2b', b: true },
+        { t: 'rect', x: 18, y: 146, w: 202, h: 8, c: '#6b543a', b: true },
+        { t: 'rect', x: 182, y: 136, w: 16, h: 12, c: '#8a5f33', b: true },
+        { t: 'ell', x: 190, y: 132, rx: 10, ry: 8, c: '#3f6b42' },
+        { t: 'ell', x: 186, y: 129, rx: 5, ry: 4, c: '#4e7d4a' },
+
+        /* --- neon --- */
+        { t: 'rect', x: 448, y: 30, w: 172, h: 62, c: '#1b1614', b: 'down' },
+        { t: 'rect', x: 452, y: 34, w: 164, h: 54, c: '#120f0d' },
+        { t: 'ell', x: 534, y: 52, rx: 86, ry: 26, c: 'rgba(208,43,43,0.16)' },
+        { t: 'text', x: 534, y: 42, s: 'DOUBLE R', c: '#e0343a', size: 16, bold: true, align: 'center' },
+        { t: 'text', x: 534, y: 64, s: 'D I N E R', c: '#f0c060', size: 9, align: 'center' },
+        { t: 'rect', x: 452, y: 78, w: 164, h: 1, c: 'rgba(240,192,96,0.35)' },
+
+        /* --- lednička s Maxovou kresbou --- */
+        { t: 'rect', x: 54, y: 148, w: 66, h: 92, c: '#b9bdb6', b: true },
+        { t: 'rect', x: 54, y: 148, w: 66, h: 5, c: '#8f938d' },
+        { t: 'rect', x: 54, y: 190, w: 66, h: 2, c: '#8f938d' },
+        { t: 'rect', x: 111, y: 196, w: 5, h: 20, c: '#6d716c', b: true },
+        { t: 'rect', x: 64, y: 166, w: 34, h: 28, c: '#efe7d8', b: true },
+        { t: 'line', x1: 68, y1: 189, x2: 94, y2: 189, c: '#6f8f5e', w: 1 },
+        { t: 'ell', x: 76, y: 180, rx: 6, ry: 5, c: '#8a5f33' },
+        { t: 'rect', x: 82, y: 176, w: 7, h: 4, c: '#8a5f33' },
+        { t: 'line', x1: 70, y1: 184, x2: 66, y2: 190, c: '#8a5f33', w: 1 },
+        { t: 'rect', x: 62, y: 164, w: 4, h: 4, c: '#a81c22' },
+        { t: 'rect', x: 96, y: 164, w: 4, h: 4, c: '#3f6b42' },
+        { t: 'rect', x: 66, y: 200, w: 22, h: 14, c: '#d8cba8', b: true },
+
+        /* --- police, cedule, kávovar --- */
+        { t: 'rect', x: 206, y: 146, w: 220, h: 7, c: '#6b543a', b: true },
+        { t: 'rect', x: 216, y: 134, w: 13, h: 12, c: '#d9dcdb', b: true },
+        { t: 'rect', x: 234, y: 134, w: 13, h: 12, c: '#d9dcdb', b: true },
+        { t: 'rect', x: 252, y: 134, w: 13, h: 12, c: '#d9dcdb', b: true },
+        { t: 'rect', x: 272, y: 132, w: 15, h: 14, c: '#c9903a', b: true },
+        { t: 'rect', x: 300, y: 124, w: 52, h: 22, c: '#37312a', b: true },
+        { t: 'text', x: 326, y: 129, s: 'DNES', c: '#e2d3ae', size: 7, align: 'center' },
+        { t: 'text', x: 326, y: 138, s: 'VIŠŇOVÝ', c: '#e0343a', size: 6, align: 'center' },
+        { t: 'rect', x: 366, y: 128, w: 44, h: 18, c: '#4a5257', b: true },
+        { t: 'text', x: 388, y: 133, s: 'CENY', c: '#c9b26a', size: 7, align: 'center' },
+        { t: 'rect', x: 118, y: 186, w: 48, h: 52, c: '#464e53', b: true },
+        { t: 'rect', x: 124, y: 192, w: 36, h: 16, c: '#22262a', b: 'down' },
+        { t: 'rect', x: 128, y: 196, w: 8, h: 8, c: '#8d9aa0' },
+        { t: 'rect', x: 126, y: 212, w: 22, h: 24, c: '#1d1713', b: true },
+        { t: 'rect', x: 128, y: 220, w: 18, h: 14, c: '#46201a' },
+        { t: 'rect', x: 148, y: 214, w: 6, h: 12, c: '#8a2a2a' },
+        { t: 'ell', x: 136, y: 184, rx: 7, ry: 4, c: 'rgba(230,230,220,0.18)' },
+
+        /* --- vitrína s koláči --- */
+        { t: 'rect', x: 320, y: 186, w: 78, h: 52, c: '#6d716c' },
+        { t: 'rect', x: 324, y: 190, w: 70, h: 44, c: '#9aa2a6', alpha: 0.45 },
+        { t: 'rect', x: 324, y: 226, w: 70, h: 8, c: '#c9903a', b: true },
+        { t: 'poly', pts: [[332, 226], [350, 202], [368, 226]], c: '#a81c22' },
+        { t: 'poly', pts: [[332, 226], [341, 214], [350, 226]], c: '#c2262c' },
+        { t: 'poly', pts: [[354, 226], [370, 206], [386, 226]], c: '#7e1218' },
+        { t: 'rect', x: 320, y: 186, w: 78, h: 4, c: '#8f959a', b: true },
+        { t: 'line', x1: 330, y1: 192, x2: 338, y2: 222, c: 'rgba(255,255,255,0.25)', w: 3 },
+
+        /* --- pult --- */
+        { t: 'wood', x: 0, y: 234, w: 528, h: 18, c: '#8a6e4c', plank: 18, z: 272 },
+        { t: 'rect', x: 0, y: 232, w: 528, h: 4, c: '#c6cbc9', b: true, z: 272 },
+        { t: 'rect', x: 0, y: 252, w: 528, h: 20, c: '#63402f', z: 272 },
+        { t: 'stripes', x: 0, y: 252, w: 528, h: 20, c: 'rgba(0,0,0,0.22)', gap: 26, thick: 2, z: 272 },
+        { t: 'rect', x: 0, y: 250, w: 528, h: 3, c: '#a9a29a', z: 272 },
+        { t: 'rect', x: 0, y: 268, w: 528, h: 5, c: '#37281f', z: 272 },
+        /* drobnosti na pultu */
+        { t: 'rect', x: 286, y: 222, w: 14, h: 12, c: '#c6cbc9', b: true, z: 273 },
+        { t: 'rect', x: 306, y: 224, w: 8, h: 10, c: '#a81c22', b: true, z: 273 },
+        { t: 'rect', x: 316, y: 224, w: 8, h: 10, c: '#c9b26a', b: true, z: 273 },
+        { t: 'rect', x: 404, y: 224, w: 12, h: 12, c: '#c6cbc9', b: true, z: 273 },
+        { t: 'rect', x: 478, y: 220, w: 18, h: 16, c: '#8a7053', b: true, z: 273 },
+        { t: 'rect', x: 480, y: 216, w: 14, h: 6, c: '#e2d3ae', z: 273 },
+
+        /* --- barové stoličky --- */
+        { t: 'rect', x: 292, y: 282, w: 9, h: 26, c: '#3f4750', b: true, z: 281 },
+        { t: 'ell', x: 296, y: 282, rx: 16, ry: 6, c: '#8c4a52', z: 281 },
+        { t: 'ell', x: 296, y: 280, rx: 14, ry: 4, c: '#a05a60', z: 281 },
+        { t: 'rect', x: 348, y: 282, w: 9, h: 26, c: '#3f4750', b: true, z: 281 },
+        { t: 'ell', x: 352, y: 282, rx: 16, ry: 6, c: '#8c4a52', z: 281 },
+        { t: 'ell', x: 352, y: 280, rx: 14, ry: 4, c: '#a05a60', z: 281 },
+        { t: 'rect', x: 404, y: 282, w: 9, h: 26, c: '#3f4750', b: true, z: 281 },
+        { t: 'ell', x: 408, y: 282, rx: 16, ry: 6, c: '#8c4a52', z: 281 },
+        { t: 'ell', x: 408, y: 280, rx: 14, ry: 4, c: '#a05a60', z: 281 },
+
+        /* --- dveře ven --- */
+        { t: 'rect', x: 556, y: 126, w: 76, h: 148, c: '#5a4636', b: true },
+        { t: 'rect', x: 562, y: 134, w: 64, h: 78, c: '#8d9aa0' },
+        { t: 'grad', x: 562, y: 134, w: 64, h: 78, c1: '#b9c2bc', c2: '#7e8b90' },
+        { t: 'trees', x: 562, y: 168, w: 64, h: 44, c: '#22362a', c2: '#1a2a20', n: 4, tw: 22 },
+        { t: 'rect', x: 562, y: 216, w: 64, h: 50, c: '#46372a', b: true },
+        { t: 'ell', x: 570, y: 206, rx: 4, ry: 4, c: '#e8c46a' },
+        { t: 'rect', x: 576, y: 140, w: 36, h: 16, c: '#1b1614', alpha: 0.5 },
+        { t: 'text', x: 594, y: 143, s: 'OTEVŘENO', c: '#e0343a', size: 6, align: 'center' },
+
+        /* --- podlaha --- */
+        { t: 'checker', x: 0, y: 272, w: 640, h: 44, c1: '#c8cbc6', c2: '#2a231d', size: 16 },
+        { t: 'checker', x: 528, y: 236, w: 112, h: 80, c1: '#c8cbc6', c2: '#2a231d', size: 16 },
+        { t: 'grad', x: 0, y: 272, w: 640, h: 16, c1: 'rgba(20,12,8,0.45)', c2: 'rgba(20,12,8,0)' },
+
+        /* --- věci k sebrání --- */
+        { t: 'rect', x: 444, y: 224, w: 28, h: 12, c: '#464e53', b: true, if: { not: 'diktafonVzat' }, z: 273 },
         { t: 'rect', x: 450, y: 227, w: 10, h: 6, c: '#8d9aa0', if: { not: 'diktafonVzat' }, z: 273 },
-        { t: 'rect', x: 416, y: 226, w: 14, h: 10, c: '#d9dcdb', if: { all: ['cooperOdesel', { not: 'hrnekVzat' }] }, z: 273 },
-        { t: 'rect', x: 244, y: 228, w: 28, h: 8, c: '#a08f76', if: { not: 'zapisnikVzat' }, z: 273 },
-        { t: 'rect', x: 180, y: 222, w: 18, h: 14, c: '#e8dcc0', if: { not: 'moukaVzat' }, z: 273 },
-        { t: 'rect', x: 180, y: 222, w: 18, h: 4, c: '#c3b493', if: { not: 'moukaVzat' }, z: 273 },
-      ],
+        { t: 'rect', x: 416, y: 226, w: 15, h: 11, c: '#d9dcdb', b: true, if: { all: ['cooperOdesel', { not: 'hrnekVzat' }] }, z: 273 },
+        { t: 'rect', x: 244, y: 226, w: 30, h: 10, c: '#a08f76', b: true, if: { not: 'zapisnikVzat' }, z: 273 },
+        { t: 'rect', x: 178, y: 220, w: 20, h: 16, c: '#e8dcc0', b: true, if: { not: 'moukaVzat' }, z: 273 },
+        { t: 'rect', x: 178, y: 220, w: 20, h: 4, c: '#c3b493', if: { not: 'moukaVzat' }, z: 273 },
+
+        /* --- popředí: box s lavicí a lampa (rám záběru) --- */
+        { t: 'rect', x: 0, y: 150, w: 52, h: 166, c: '#241512', fg: true },
+        { t: 'rect', x: 0, y: 150, w: 52, h: 10, c: '#31201a', fg: true },
+        { t: 'rect', x: 0, y: 238, w: 52, h: 12, c: '#3a2620', fg: true },
+        { t: 'stripes', x: 0, y: 160, w: 52, h: 78, c: 'rgba(0,0,0,0.35)', gap: 18, thick: 4, fg: true },
+        { t: 'poly', pts: [[52, 150], [62, 178], [62, 316], [52, 316]], c: '#1d110f', fg: true },
+        { t: 'rect', x: 138, y: 0, w: 6, h: 34, c: '#1d1713', fg: true },
+        { t: 'poly', pts: [[118, 34], [164, 34], [176, 58], [106, 58]], c: '#2c2119', fg: true },
+        { t: 'poly', pts: [[106, 58], [176, 58], [172, 62], [110, 62]], c: '#e8c46a', fg: true },
+            ],
       onEnter: [
         { if: { not: 'intro' }, then: [
           { wait: 500 },
@@ -150,15 +216,15 @@
             { get: 'kolac' },
             { quiet: 'kolacVzat' },
           ] }] },
-        { id: 'konvice', name: 'konvice s kávou', x: 118, y: 188, w: 50, h: 52, walkTo: [130, 290],
+        { id: 'konvice', name: 'konvice s kávou', x: 118, y: 188, w: 50, h: 52, walkTo: [132, 290],
           look: [{ say: 'Kávovar. Norma ho čistí častěji než šerif svou zbraň.' }],
           use: [{ if: { has: 'konvice' }, then: [{ say: 'Konvici mám. Teď hrnky.' }, { drop: 'konvice' }, { say: 'Vrátím ji na plotnu, ať nevychladne.' }],
                  else: [{ get: 'konvice' }] }] },
-        { id: 'lednice', name: 'lednička', x: 56, y: 150, w: 62, h: 88, walkTo: [120, 292],
-          look: [{ say: 'Na ledničce visí dětská kresba. Podepsaná velkými písmeny: MAX.' },
-                 { say: 'Je na ní pes. Docela dobrý pes, když vezmu v úvahu, že na něm někdo pracoval pastelkou.' },
-                 { say: 'Max by z toho měl radost.' }] },
-        { id: 'okno', name: 'okno', x: 26, y: 32, w: 186, h: 112, walkTo: [90, 290],
+        { id: 'lednice', name: 'lednička', x: 56, y: 150, w: 62, h: 88, walkTo: [124, 292],
+          look: [{ say: 'Na ledničce visí dětská kresba. Dole velkými písmeny podpis: MAX.' },
+                 { say: 'Je na ní pes. Docela dobrý pes na to, že vznikl pastelkou a bez modelu.' },
+                 { say: 'Tohle kreslil Max. Podpis má skoro větší než toho psa — a dobře dělá.' }] },
+        { id: 'okno', name: 'okno', x: 26, y: 32, w: 186, h: 112, walkTo: [116, 290],
           look: [{ say: 'Za oknem mlha a jedle. Mlha se hýbe pomaleji, než by měla.' }] },
         { id: 'neon', name: 'cedule', x: 452, y: 36, w: 166, h: 54, walkTo: [470, 292],
           look: [{ say: '„DOUBLE R DINER“. Zevnitř jde číst pozpátku. To se mi dnes ještě bude hodit.' }] },
@@ -173,6 +239,7 @@
     /* ================================ MAPA ================================ */
     mapa: {
       id: 'mapa', name: 'Twin Peaks', bg: 'bg_mapa', music: 'town', noWalk: true, highlightHover: true,
+      atmo: { lights: [[320, 150, 300, '255,226,170', 0.16]], wash: 'rgba(60,40,14,0.08)', vignette: 0.40 },
       art: [
         { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#241c15' },
         { t: 'rect', x: 22, y: 12, w: 596, h: 292, c: '#8a7053' },
@@ -213,6 +280,14 @@
         { t: 'text', x: 146, y: 243, s: 'Ghostwood', c: '#3b2e24', size: 9, if: 'polinkoPromluvilo' },
         { t: 'rect', x: 32, y: 276, w: 576, h: 18, c: '#cfc09a' },
         { t: 'text', x: 320, y: 280, s: 'klikni na místo, kam chceš jít', c: '#8a7053', size: 8, align: 'center' },
+
+        /* --- stárnutí papíru --- */
+        { t: 'ell', x: 520, y: 70, rx: 26, ry: 18, c: 'rgba(120,80,30,0.10)' },
+        { t: 'ell', x: 520, y: 70, rx: 21, ry: 14, c: 'rgba(200,170,120,0.10)' },
+        { t: 'ell', x: 120, y: 250, rx: 34, ry: 20, c: 'rgba(120,80,30,0.08)' },
+        { t: 'line', x1: 320, y1: 16, x2: 320, y2: 300, c: 'rgba(255,250,235,0.16)', w: 1 },
+        { t: 'line', x1: 322, y1: 16, x2: 322, y2: 300, c: 'rgba(90,60,20,0.10)', w: 1 },
+        { t: 'line', x1: 26, y1: 158, x2: 614, y2: 158, c: 'rgba(255,250,235,0.12)', w: 1 },
       ],
       hotspots: [
         { id: 'go_diner', name: 'Double R Diner', x: 70, y: 150, w: 150, h: 30, exit: 'diner', exitAt: [330, 292],
@@ -242,14 +317,19 @@
       id: 'hotel', name: 'Great Northern — hala', bg: 'bg_hotel', music: 'town',
       start: [200, 296], walk: [[30, 276], [618, 276], [618, 308], [26, 308]],
       scale: [276, 0.9, 308, 1.06],
+      atmo: {
+        lights: [[142, 202, 130, '255,150,60', 0.30], [520, 96, 160, '255,214,150', 0.20], [300, 40, 200, '255,206,140', 0.10]],
+        wash: 'rgba(66,32,8,0.12)', vignette: 0.50,
+      },
       art: [
         { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#2b221a' },
-        { t: 'grad', x: 0, y: 0, w: 640, h: 276, c1: '#6b5540', c2: '#4a3a2b' },
-        { t: 'stripes', x: 0, y: 0, w: 640, h: 276, c: 'rgba(0,0,0,0.13)', gap: 32, thick: 4 },
+        { t: 'wood', x: 0, y: 0, w: 640, h: 276, c: '#6b5540', plank: 34, vertical: true },
+        { t: 'grad', x: 0, y: 0, w: 640, h: 276, c1: 'rgba(0,0,0,0.30)', c2: 'rgba(0,0,0,0)' },
         { t: 'rect', x: 0, y: 30, w: 640, h: 8, c: WOOD_D },
         /* krb */
         { t: 'rect', x: 84, y: 150, w: 120, h: 98, c: '#5c5449' },
-        { t: 'rect', x: 96, y: 176, w: 96, h: 60, c: '#241c15' },
+        { t: 'rect', x: 96, y: 176, w: 96, h: 60, c: '#120d09' },
+        { t: 'rect', x: 96, y: 176, w: 96, h: 6, c: '#0a0705' },
         { t: 'poly', pts: [[120, 236], [136, 196], [152, 236]], c: '#c9532a' },
         { t: 'poly', pts: [[140, 236], [152, 204], [166, 236]], c: '#f0c060' },
         { t: 'rect', x: 78, y: 142, w: 132, h: 10, c: WOOD },
@@ -294,6 +374,30 @@
         { t: 'rect', x: 120, y: 284, w: 270, h: 30, c: '#6b3a3a' },
         { t: 'rect', x: 126, y: 288, w: 258, h: 22, c: '#8c4a52' },
         { t: 'stripes', x: 126, y: 288, w: 258, h: 22, c: 'rgba(0,0,0,0.12)', gap: 18, thick: 2 },
+
+        /* --- detaily haly --- */
+        { t: 'rect', x: 214, y: 224, w: 38, h: 26, c: '#4a3524', b: true },
+        { t: 'ell', x: 222, y: 224, rx: 5, ry: 4, c: '#7a5a3a' },
+        { t: 'ell', x: 234, y: 224, rx: 5, ry: 4, c: '#6b4a2f' },
+        { t: 'ell', x: 246, y: 224, rx: 5, ry: 4, c: '#7a5a3a' },
+        { t: 'rect', x: 226, y: 56, w: 70, h: 48, c: '#3b2e24', b: true },
+        { t: 'rect', x: 231, y: 61, w: 60, h: 38, c: '#7d8f84' },
+        { t: 'trees', x: 231, y: 76, w: 60, h: 23, c: '#22362a', c2: '#1a2a20', n: 4, tw: 18 },
+        { t: 'rect', x: 306, y: 246, w: 14, h: 30, c: '#3b2e24', b: true },
+        { t: 'rect', x: 300, y: 224, w: 26, h: 22, c: '#c9903a', b: true },
+        { t: 'ell', x: 313, y: 232, rx: 16, ry: 12, c: 'rgba(255,206,140,0.22)' },
+        { t: 'rect', x: 596, y: 214, w: 14, h: 22, c: '#3b2e24', b: true, z: 279 },
+        { t: 'rect', x: 592, y: 200, w: 22, h: 16, c: '#c9903a', b: true, z: 279 },
+        { t: 'rect', x: 452, y: 224, w: 26, h: 12, c: '#d8cba8', b: true, z: 279 },
+        /* --- popředí: stropní trám, lustr a kapradina v rohu --- */
+        { t: 'rect', x: 0, y: 0, w: 640, h: 22, c: '#241a12', fg: true },
+        { t: 'rect', x: 0, y: 22, w: 640, h: 5, c: '#33261b', fg: true },
+        { t: 'rect', x: 318, y: 22, w: 5, h: 26, c: '#1d1712', fg: true },
+        { t: 'poly', pts: [[300, 48], [342, 48], [352, 70], [290, 70]], c: '#2c2119', fg: true },
+        { t: 'poly', pts: [[290, 70], [352, 70], [348, 74], [294, 74]], c: '#e8c46a', fg: true },
+        { t: 'poly', pts: [[0, 238], [30, 250], [42, 292], [0, 316]], c: '#1a1410', fg: true },
+        { t: 'poly', pts: [[6, 244], [40, 226], [34, 268]], c: '#1f2a1c', fg: true },
+        { t: 'poly', pts: [[0, 252], [26, 230], [30, 276]], c: '#182317', fg: true },
       ],
       hotspots: [
         { id: 'ben', actor: 'ben', x: 520, y: 252, facing: -1, walkTo: [486, 292], face: 'right',
@@ -337,9 +441,14 @@
       id: 'chodba', name: 'Great Northern — chodba', bg: 'bg_chodba', music: 'town',
       start: [110, 292], walk: [[44, 278], [596, 278], [596, 308], [40, 308]],
       scale: [278, 0.88, 308, 1.04],
+      atmo: {
+        lights: [[120, 70, 130, '255,206,140', 0.30], [360, 70, 130, '255,206,140', 0.30], [560, 70, 130, '255,206,140', 0.26]],
+        wash: 'rgba(60,28,10,0.14)', vignette: 0.52,
+      },
       art: [
         { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#241c15' },
-        { t: 'grad', x: 0, y: 0, w: 640, h: 278, c1: '#5e4b38', c2: '#3d3024' },
+        { t: 'wood', x: 0, y: 0, w: 640, h: 278, c: '#5e4b38', plank: 30, vertical: true },
+        { t: 'grad', x: 0, y: 0, w: 640, h: 278, c1: 'rgba(0,0,0,0.34)', c2: 'rgba(0,0,0,0.05)' },
         { t: 'rect', x: 0, y: 40, w: 640, h: 6, c: WOOD_D },
         { t: 'rect', x: 0, y: 198, w: 640, h: 10, c: WOOD_D },
         /* lampy */
@@ -378,6 +487,22 @@
         { t: 'rect', x: 0, y: 280, w: 640, h: 36, c: '#5f4630' },
         { t: 'rect', x: 30, y: 284, w: 580, h: 32, c: '#7a2f34' },
         { t: 'stripes', x: 30, y: 284, w: 580, h: 32, c: 'rgba(0,0,0,0.20)', gap: 22, thick: 3 },
+
+        /* --- detaily chodby --- */
+        { t: 'rect', x: 112, y: 76, w: 18, h: 12, c: '#3b2e24', b: true },
+        { t: 'rect', x: 352, y: 76, w: 18, h: 12, c: '#3b2e24', b: true },
+        { t: 'rect', x: 552, y: 76, w: 18, h: 12, c: '#3b2e24', b: true },
+        { t: 'rect', x: 336, y: 118, w: 60, h: 46, c: '#4a3b2b', b: true },
+        { t: 'rect', x: 341, y: 123, w: 50, h: 36, c: '#8a7053' },
+        { t: 'trees', x: 341, y: 140, w: 50, h: 19, c: '#2c4a30', c2: '#22362a', n: 3, tw: 16 },
+        { t: 'rect', x: 400, y: 206, w: 14, h: 32, c: '#a81c22', b: true },
+        { t: 'rect', x: 402, y: 200, w: 10, h: 8, c: '#4a5257' },
+        { t: 'rect', x: 330, y: 266, w: 34, h: 8, c: '#c6cbc9', b: true },
+        { t: 'ell', x: 340, y: 266, rx: 5, ry: 3, c: '#d9dcdb' },
+        /* --- popředí: rámy chodby --- */
+        { t: 'rect', x: 0, y: 0, w: 640, h: 20, c: '#201811', fg: true },
+        { t: 'poly', pts: [[0, 0], [30, 0], [24, 316], [0, 316]], c: '#1a130e', fg: true },
+        { t: 'poly', pts: [[640, 0], [606, 0], [614, 316], [640, 316]], c: '#1a130e', fg: true },
       ],
       hotspots: [
         { id: 'pokojska', actor: 'pokojska', x: 300, y: 286, facing: 1, walkTo: [270, 300], face: 'right',
@@ -423,9 +548,15 @@
       id: 'pokoj315', name: 'pokoj 315', bg: 'bg_pokoj315', music: 'town',
       start: [120, 296], walk: [[46, 272], [592, 272], [596, 308], [42, 308]],
       scale: [272, 0.88, 308, 1.04],
+      atmo: {
+        lights: [[510, 150, 300, '216,228,230', 0.34], [276, 206, 130, '255,196,120', 0.20]],
+        wash: 'rgba(40,30,16,0.05)', vignette: 0.38,
+      },
       art: [
         { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#221b15' },
-        { t: 'grad', x: 0, y: 0, w: 640, h: 272, c1: '#6a5741', c2: '#423326' },
+        { t: 'plaster', x: 0, y: 0, w: 640, h: 272, c: '#7d664a', n: 40 },
+        { t: 'stripes', x: 0, y: 0, w: 640, h: 186, c: 'rgba(255,228,186,0.09)', gap: 13, thick: 4 },
+        { t: 'grad', x: 0, y: 0, w: 640, h: 272, c1: 'rgba(0,0,0,0.26)', c2: 'rgba(0,0,0,0)' },
         { t: 'rect', x: 0, y: 186, w: 640, h: 8, c: '#3b2e24' },
         /* okno do mlhy */
         { t: 'rect', x: 400, y: 52, w: 180, h: 116, c: '#3b2e24' },
@@ -433,10 +564,13 @@
         { t: 'trees', x: 406, y: 104, w: 168, h: 58, c: '#1b2f1f', c2: '#14241a', n: 6, tw: 30 },
         { t: 'rect', x: 488, y: 58, w: 4, h: 104, c: '#3b2e24' },
         /* postel */
-        { t: 'rect', x: 56, y: 196, w: 190, h: 74, c: '#4f3b28' },
-        { t: 'rect', x: 50, y: 150, w: 26, h: 120, c: '#43321f' },
-        { t: 'rect', x: 62, y: 190, w: 180, h: 26, c: '#b7a98c' },
-        { t: 'rect', x: 62, y: 182, w: 62, h: 20, c: '#e4ddc8' },
+        { t: 'rect', x: 56, y: 196, w: 190, h: 74, c: '#4f3b28', b: true },
+        { t: 'rect', x: 50, y: 148, w: 28, h: 122, c: '#43321f', b: true },
+        { t: 'rect', x: 62, y: 190, w: 180, h: 28, c: '#8a7c62', b: true },
+        { t: 'rect', x: 62, y: 190, w: 180, h: 7, c: '#c6bfae' },
+        { t: 'stripes', x: 62, y: 197, w: 180, h: 21, c: 'rgba(0,0,0,0.12)', gap: 20, thick: 3 },
+        { t: 'rect', x: 66, y: 180, w: 66, h: 22, c: '#e4ddc8', b: true },
+        { t: 'rect', x: 62, y: 214, w: 180, h: 5, c: 'rgba(0,0,0,0.18)' },
         /* noční stolek s knihou */
         { t: 'rect', x: 254, y: 214, w: 56, h: 56, c: '#5a4636' },
         { t: 'rect', x: 258, y: 232, w: 48, h: 6, c: '#43321f' },
@@ -461,6 +595,21 @@
         { t: 'stripes', x: 0, y: 274, w: 640, h: 42, c: 'rgba(0,0,0,0.20)', gap: 32, thick: 3 },
         { t: 'rect', x: 120, y: 280, w: 380, h: 30, c: '#6b3a3a' },
         { t: 'stripes', x: 120, y: 280, w: 380, h: 30, c: 'rgba(0,0,0,0.18)', gap: 20, thick: 3 },
+
+        /* --- detaily pokoje --- */
+        { t: 'rect', x: 386, y: 42, w: 18, h: 136, c: '#6e3a3a', b: true },
+        { t: 'rect', x: 576, y: 42, w: 18, h: 136, c: '#6e3a3a', b: true },
+        { t: 'rect', x: 386, y: 42, w: 208, h: 10, c: '#4a2b2e', b: true },
+        { t: 'rect', x: 262, y: 188, w: 26, h: 16, c: '#c9903a', b: true },
+        { t: 'rect', x: 272, y: 204, w: 6, h: 10, c: '#3b2e24' },
+        { t: 'ell', x: 275, y: 196, rx: 26, ry: 18, c: 'rgba(255,196,120,0.20)' },
+        { t: 'rect', x: 528, y: 244, w: 58, h: 28, c: '#5a3a24', b: true },
+        { t: 'rect', x: 528, y: 252, w: 58, h: 4, c: '#c9903a' },
+        { t: 'rect', x: 550, y: 238, w: 14, h: 8, c: '#3b2e24', b: true },
+        { t: 'rect', x: 86, y: 176, w: 58, h: 10, c: '#c6bfae', b: true },
+        /* --- popředí --- */
+        { t: 'rect', x: 0, y: 0, w: 640, h: 18, c: '#1d1610', fg: true },
+        { t: 'poly', pts: [[0, 0], [22, 0], [16, 316], [0, 316]], c: '#171009', fg: true },
       ],
       onEnter: [
         { if: { not: 'byla315' }, then: [
@@ -516,9 +665,14 @@
       id: 'stanice', name: 'Šerifova stanice', bg: 'bg_stanice', music: 'town',
       start: [110, 296], walk: [[52, 280], [604, 280], [608, 308], [48, 308]],
       scale: [280, 0.9, 308, 1.06],
+      atmo: {
+        lights: [[180, 40, 200, '214,228,232', 0.22], [470, 40, 200, '214,228,232', 0.20]],
+        wash: 'rgba(30,40,36,0.10)', vignette: 0.42,
+      },
       art: [
         { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#2b2a24' },
-        { t: 'grad', x: 0, y: 0, w: 640, h: 280, c1: '#9aa08c', c2: '#6e7566' },
+        { t: 'plaster', x: 0, y: 0, w: 640, h: 280, c: '#98a08b', n: 44 },
+        { t: 'grad', x: 0, y: 0, w: 640, h: 280, c1: 'rgba(0,0,0,0.20)', c2: 'rgba(0,0,0,0.04)' },
         { t: 'rect', x: 0, y: 196, w: 640, h: 8, c: '#4d5346' },
         { t: 'rect', x: 0, y: 204, w: 640, h: 76, c: '#5f6a55' },
         /* nástěnka */
@@ -556,9 +710,30 @@
         /* podlaha */
         { t: 'rect', x: 0, y: 280, w: 640, h: 36, c: '#4a4438' },
         { t: 'stripes', x: 0, y: 280, w: 640, h: 36, c: 'rgba(0,0,0,0.16)', gap: 30, thick: 3 },
+
+        /* --- detaily stanice --- */
+        { t: 'rect', x: 262, y: 200, w: 30, h: 76, c: '#8d9aa0', b: true },
+        { t: 'rect', x: 266, y: 176, w: 22, h: 28, c: '#a8d0dc', b: true },
+        { t: 'rect', x: 268, y: 244, w: 18, h: 4, c: '#4a5257' },
+        { t: 'rect', x: 392, y: 246, w: 76, h: 30, c: '#6b5540', b: true },
+        { t: 'rect', x: 396, y: 240, w: 68, h: 8, c: '#7a6349', b: true },
+        { t: 'rect', x: 556, y: 152, w: 20, h: 16, c: '#2a2f33', b: true },
+        { t: 'rect', x: 578, y: 154, w: 12, h: 12, c: '#a81c22', b: true },
+        { t: 'ell', x: 356, y: 306, rx: 13, ry: 5, c: '#4a5257' },
+        { t: 'ell', x: 356, y: 305, rx: 9, ry: 3, c: '#2a2f33' },
+        { t: 'rect', x: 216, y: 128, w: 40, h: 26, c: '#8a6a3a', b: true },
+        { t: 'rect', x: 220, y: 132, w: 32, h: 18, c: '#d8cba8' },
+        { t: 'text', x: 236, y: 136, s: 'HLEDÁ SE', c: '#7a2f34', size: 5, align: 'center' },
+        /* --- popředí: zářivky a rám --- */
+        { t: 'rect', x: 0, y: 0, w: 640, h: 14, c: '#3a3f36', fg: true },
+        { t: 'rect', x: 150, y: 14, w: 96, h: 8, c: '#c6cbc9', fg: true },
+        { t: 'rect', x: 150, y: 22, w: 96, h: 3, c: '#8f938d', fg: true },
+        { t: 'rect', x: 404, y: 14, w: 96, h: 8, c: '#c6cbc9', fg: true },
+        { t: 'rect', x: 404, y: 22, w: 96, h: 3, c: '#8f938d', fg: true },
+        { t: 'poly', pts: [[640, 0], [612, 0], [618, 316], [640, 316]], c: '#232720', fg: true },
       ],
       hotspots: [
-        { id: 'lucy', actor: 'lucy', x: 150, y: 252, facing: 1, walkTo: [160, 292], face: 'left',
+        { id: 'lucy', actor: 'lucy', x: 176, y: 240, facing: 1, walkTo: [180, 292], face: 'left',
           talk: [{ dialog: 'lucy' }],
           look: [{ say: 'Lucy. Drží stanici, telefon i Andyho. Dneska drží hlavně novou kabelku.' }] },
         { id: 'andy', actor: 'andy', x: 300, y: 292, facing: -1, walkTo: [272, 300], face: 'right',
@@ -603,10 +778,14 @@
       id: 'chatka', name: 'Chatka u lesa', bg: 'bg_chatka', music: 'woods',
       start: [96, 294], walk: [[46, 274], [596, 274], [600, 308], [42, 308]],
       scale: [274, 0.88, 308, 1.04],
+      atmo: {
+        lights: [[104, 214, 190, '255,150,60', 0.36], [430, 100, 150, '198,214,214', 0.16]],
+        wash: 'rgba(72,34,6,0.14)', vignette: 0.54,
+      },
       art: [
         { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#2a2119' },
-        { t: 'grad', x: 0, y: 0, w: 640, h: 274, c1: '#6b5a43', c2: '#463829' },
-        { t: 'stripes', x: 0, y: 0, w: 640, h: 274, c: 'rgba(0,0,0,0.16)', gap: 22, thick: 3, vertical: false },
+        { t: 'wood', x: 0, y: 0, w: 640, h: 274, c: '#6b5a43', plank: 22 },
+        { t: 'grad', x: 0, y: 0, w: 640, h: 274, c1: 'rgba(0,0,0,0.30)', c2: 'rgba(0,0,0,0.02)' },
         /* okno do mlhy */
         { t: 'rect', x: 372, y: 62, w: 130, h: 92, c: WOOD_D },
         { t: 'grad', x: 378, y: 68, w: 118, h: 80, c1: '#8d9aa0', c2: '#b9c2bc' },
@@ -646,6 +825,30 @@
         { t: 'stripes', x: 0, y: 276, w: 640, h: 40, c: 'rgba(0,0,0,0.22)', gap: 30, thick: 3 },
         { t: 'ell', x: 200, y: 300, rx: 70, ry: 14, c: '#7a3f3a' },
         { t: 'ell', x: 200, y: 300, rx: 54, ry: 9, c: '#9a5a4a' },
+
+        /* --- detaily chatky --- */
+        { t: 'rect', x: 84, y: 156, w: 38, h: 14, c: '#2f3338', b: true },
+        { t: 'rect', x: 92, y: 148, w: 8, h: 10, c: '#4a5257' },
+        { t: 'rect', x: 148, y: 236, w: 44, h: 38, c: '#5a3a24', b: true },
+        { t: 'ell', x: 158, y: 236, rx: 6, ry: 5, c: '#7a5a3a' },
+        { t: 'ell', x: 172, y: 236, rx: 6, ry: 5, c: '#6b4a2f' },
+        { t: 'ell', x: 184, y: 236, rx: 6, ry: 5, c: '#7a5a3a' },
+        { t: 'rect', x: 452, y: 176, w: 66, h: 12, c: '#4a3b2b', b: true },
+        { t: 'rect', x: 460, y: 188, w: 8, h: 26, c: '#6f8f5e' },
+        { t: 'rect', x: 478, y: 188, w: 8, h: 30, c: '#5f7a52' },
+        { t: 'rect', x: 496, y: 188, w: 8, h: 24, c: '#6f8f5e' },
+        { t: 'rect', x: 250, y: 246, w: 8, h: 28, c: '#3f3123' },
+        { t: 'rect', x: 278, y: 246, w: 8, h: 28, c: '#3f3123' },
+        { t: 'rect', x: 246, y: 238, w: 44, h: 9, c: '#6b543a', b: true },
+        { t: 'rect', x: 250, y: 208, w: 7, h: 32, c: '#4a3b2b', b: true },
+        { t: 'rect', x: 279, y: 208, w: 7, h: 32, c: '#4a3b2b', b: true },
+        { t: 'rect', x: 248, y: 208, w: 40, h: 7, c: '#5a4636', b: true },
+        { t: 'rect', x: 248, y: 222, w: 40, h: 5, c: '#4a3b2b', b: true },
+        /* --- popředí: krov a roh --- */
+        { t: 'rect', x: 0, y: 0, w: 640, h: 20, c: '#241a12', fg: true },
+        { t: 'poly', pts: [[0, 20], [640, 20], [640, 30], [0, 34]], c: '#2c2119', fg: true },
+        { t: 'rect', x: 300, y: 30, w: 8, h: 18, c: '#1d1712', fg: true },
+        { t: 'poly', pts: [[0, 0], [26, 0], [20, 316], [0, 316]], c: '#1a130e', fg: true },
       ],
       onEnter: [
         { if: { not: 'byleVChatce' }, then: [
@@ -692,6 +895,10 @@
       id: 'les', name: 'Les u Ghostwoodu', bg: 'bg_les', music: 'woods',
       start: [70, 292], walk: [[40, 268], [600, 268], [608, 308], [34, 308]],
       scale: [268, 0.84, 308, 1.04],
+      atmo: {
+        lights: [[320, 40, 320, '150,178,166', 0.16]],
+        wash: 'rgba(16,38,28,0.20)', vignette: 0.56,
+      },
       art: [
         { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#0f1a12' },
         { t: 'grad', x: 0, y: 0, w: 640, h: 180, c1: '#4a5a52', c2: '#20302a' },
@@ -713,6 +920,30 @@
         /* cesta */
         { t: 'poly', pts: [[0, 308], [180, 264], [280, 264], [160, 316], [0, 316]], c: '#3a3528' },
         { t: 'text', x: 92, y: 250, s: 'zpět', c: '#8d9aa0', size: 8, align: 'center' },
+
+        /* --- podrost a mlha --- */
+        { t: 'grad', x: 0, y: 150, w: 640, h: 80, c1: 'rgba(150,170,162,0)', c2: 'rgba(150,170,162,0.30)' },
+        { t: 'grad', x: 0, y: 214, w: 640, h: 60, c1: 'rgba(150,170,162,0.26)', c2: 'rgba(150,170,162,0)' },
+        { t: 'ell', x: 140, y: 268, rx: 34, ry: 9, c: '#24301f' },
+        { t: 'ell', x: 250, y: 262, rx: 26, ry: 7, c: '#1f2a1c' },
+        { t: 'ell', x: 520, y: 272, rx: 40, ry: 10, c: '#24301f' },
+        { t: 'ell', x: 596, y: 296, rx: 30, ry: 9, c: '#1f2a1c' },
+        { t: 'ell', x: 214, y: 292, rx: 22, ry: 7, c: '#3a3528' },
+        { t: 'poly', pts: [[96, 268], [116, 240], [126, 268]], c: '#26351f' },
+        { t: 'poly', pts: [[112, 268], [132, 236], [146, 268]], c: '#1f2c1a' },
+        { t: 'poly', pts: [[486, 272], [506, 244], [518, 272]], c: '#26351f' },
+        { t: 'ell', x: 300, y: 282, rx: 18, ry: 6, c: '#3f3a2c' },
+        { t: 'ell', x: 296, y: 280, rx: 10, ry: 4, c: '#4a4436' },
+        /* --- popředí: kmeny a kapradí --- */
+        { t: 'rect', x: 34, y: 0, w: 46, h: 316, c: '#1c1209', fg: true },
+        { t: 'stripes', x: 34, y: 0, w: 46, h: 316, c: 'rgba(0,0,0,0.45)', gap: 11, thick: 3, fg: true },
+        { t: 'rect', x: 556, y: 0, w: 56, h: 316, c: '#1c1209', fg: true },
+        { t: 'stripes', x: 556, y: 0, w: 56, h: 316, c: 'rgba(0,0,0,0.45)', gap: 13, thick: 3, fg: true },
+        { t: 'poly', pts: [[0, 316], [40, 268], [70, 316]], c: '#12190f', fg: true },
+        { t: 'poly', pts: [[26, 316], [86, 262], [116, 316]], c: '#0f150c', fg: true },
+        { t: 'poly', pts: [[600, 316], [560, 256], [640, 268]], c: '#0f150c', fg: true },
+        { t: 'poly', pts: [[0, 0], [120, 0], [40, 60]], c: '#101a12', fg: true },
+        { t: 'poly', pts: [[640, 0], [520, 0], [600, 54]], c: '#101a12', fg: true },
       ],
       onEnter: [
         { if: { not: 'bylaVLese' }, then: [
@@ -759,9 +990,13 @@
       id: 'diner2', name: 'Double R Diner — podvečer', bg: 'bg_diner2', music: 'diner',
       start: [300, 294], walk: [[26, 274], [560, 274], [566, 308], [22, 308]],
       scale: [274, 0.88, 308, 1.06],
+      atmo: {
+        lights: [[140, 60, 170, '255,196,120', 0.30], [534, 60, 150, '224,72,72', 0.16], [330, 210, 220, '255,186,110', 0.14]],
+        wash: 'rgba(40,18,30,0.18)', vignette: 0.54,
+      },
       art: [
         { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#1d1712' },
-        { t: 'grad', x: 0, y: 0, w: 640, h: 160, c1: '#8a7053', c2: '#5c4a35' },
+        { t: 'plaster', x: 0, y: 0, w: 640, h: 164, c: '#8a7053', n: 40 },
         { t: 'rect', x: 0, y: 156, w: 640, h: 6, c: '#c9b294' },
         { t: 'rect', x: 0, y: 162, w: 640, h: 78, c: '#6e3a41' },
         { t: 'rect', x: 26, y: 32, w: 186, h: 112, c: '#2f251d' },
@@ -771,9 +1006,23 @@
         { t: 'text', x: 535, y: 46, s: 'DOUBLE R', c: '#e0343a', size: 16, bold: true, align: 'center' },
         { t: 'text', x: 535, y: 68, s: 'D I N E R', c: '#f0c060', size: 9, align: 'center' },
         { t: 'grad', x: 0, y: 0, w: 640, h: 90, c1: 'rgba(240,192,96,0.16)', c2: 'rgba(240,192,96,0)' },
-        { t: 'rect', x: 0, y: 236, w: 528, h: 16, c: '#7a6349', z: 272 },
-        { t: 'rect', x: 0, y: 252, w: 528, h: 18, c: '#5c3f32', z: 272 },
-        { t: 'rect', x: 0, y: 268, w: 528, h: 4, c: '#2f251d', z: 272 },
+        { t: 'wood', x: 0, y: 234, w: 528, h: 18, c: '#7a6349', plank: 18, z: 272 },
+        { t: 'rect', x: 0, y: 232, w: 528, h: 4, c: '#9aa09c', b: true, z: 272 },
+        { t: 'rect', x: 0, y: 252, w: 528, h: 20, c: '#5c3f32', z: 272 },
+        { t: 'stripes', x: 0, y: 252, w: 528, h: 20, c: 'rgba(0,0,0,0.24)', gap: 26, thick: 2, z: 272 },
+        { t: 'rect', x: 0, y: 268, w: 528, h: 5, c: '#2f251d', z: 272 },
+        /* police a lednička jako ráno, jen potmě */
+        { t: 'rect', x: 206, y: 146, w: 220, h: 7, c: '#55422c', b: true },
+        { t: 'rect', x: 216, y: 134, w: 13, h: 12, c: '#9ea19c', b: true },
+        { t: 'rect', x: 234, y: 134, w: 13, h: 12, c: '#9ea19c', b: true },
+        { t: 'rect', x: 252, y: 134, w: 13, h: 12, c: '#9ea19c', b: true },
+        { t: 'rect', x: 54, y: 148, w: 66, h: 92, c: '#8e918b', b: true },
+        { t: 'rect', x: 64, y: 166, w: 34, h: 28, c: '#c6bfae', b: true },
+        { t: 'rect', x: 118, y: 186, w: 48, h: 52, c: '#3a4045', b: true },
+        { t: 'rect', x: 126, y: 212, w: 22, h: 24, c: '#1d1713', b: true },
+        { t: 'rect', x: 300, y: 124, w: 52, h: 22, c: '#2c2720', b: true },
+        { t: 'text', x: 326, y: 129, s: 'DNES', c: '#b9ab8a', size: 7, align: 'center' },
+        { t: 'text', x: 326, y: 138, s: 'VIŠŇOVÝ', c: '#b0393d', size: 6, align: 'center' },
         { t: 'rect', x: 324, y: 190, w: 72, h: 48, c: '#7c8287', alpha: 0.45 },
         { t: 'poly', pts: [[334, 232], [352, 206], [370, 232]], c: '#a81c22' },
         { t: 'rect', x: 324, y: 232, w: 72, h: 6, c: '#c9903a' },
@@ -782,6 +1031,15 @@
         { t: 'checker', x: 0, y: 272, w: 640, h: 44, c1: '#9fa5a2', c2: '#201914', size: 16 },
         { t: 'checker', x: 528, y: 236, w: 112, h: 40, c1: '#9fa5a2', c2: '#201914', size: 16 },
         { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: 'rgba(20,10,6,0.18)' },
+
+        /* --- popředí: box a lampa jako ráno, jen studenější --- */
+        { t: 'rect', x: 0, y: 150, w: 52, h: 166, c: '#1b0f0e', fg: true },
+        { t: 'rect', x: 0, y: 150, w: 52, h: 10, c: '#281a16', fg: true },
+        { t: 'rect', x: 0, y: 238, w: 52, h: 12, c: '#2f1f1b', fg: true },
+        { t: 'poly', pts: [[52, 150], [62, 178], [62, 316], [52, 316]], c: '#150c0b', fg: true },
+        { t: 'rect', x: 138, y: 0, w: 6, h: 34, c: '#15100d', fg: true },
+        { t: 'poly', pts: [[118, 34], [164, 34], [176, 58], [106, 58]], c: '#241a14', fg: true },
+        { t: 'poly', pts: [[106, 58], [176, 58], [172, 62], [110, 62]], c: '#e8c46a', fg: true },
       ],
       onEnter: [
         { wait: 700 },
