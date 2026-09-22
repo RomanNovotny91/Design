@@ -102,11 +102,17 @@ nešířit veřejně, nenahrávat na veřejné platformy.
 
 ## Jak to dostat na web
 
-**GitHub Pages** — jednou v `Settings → Pages` přepnout *Source* na
-**GitHub Actions**, pak workflow `.github/workflows/pages.yml` nasadí web sám
-při každém pushi do vývojové větve. Kořen webu je specimen, hra běží na
-`/twin-peaks/`. Token GitHub Actions nesmí Pages založit, proto ten jeden
-ruční krok.
+**GitHub Pages** — v `Settings → Pages` nastavit *Source* na **Deploy from a
+branch**, větev `claude/koukl-ses-tohle-pustil-8hsw83` a složku `/ (root)`.
+GitHub pak servíruje repozitář přímo: hra běží na `/twin-peaks/`.
+
+Nasazení přes GitHub Actions tady nefunguje — zapnutím Pages vznikne prostředí
+`github-pages`, které pouští jen výchozí nebo chráněnou větev, a tahle větev
+není ani jedno. Workflow proto v repozitáři není (je v historii, commit
+„Nasazuj hru na GitHub Pages“, kdyby se někdy hodil).
+
+Soubor `.nojekyll` v kořeni vypíná Jekyll, aby Pages servírovaly soubory tak,
+jak jsou.
 
 **Jeden soubor bez hostingu** — `node build-standalone.js` vloží engine i data
 přímo do HTML a uloží `dist/twin-peaks-hra.html`. Ten jde poslat mailem nebo
