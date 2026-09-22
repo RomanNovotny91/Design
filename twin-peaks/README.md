@@ -99,3 +99,16 @@ obálka tónu) a obraz se přebarví do rudé.
 
 Hra je soukromý dárek pro jednoho člověka. Twin Peaks má vlastníka práv —
 nešířit veřejně, nenahrávat na veřejné platformy.
+
+## Jak to dostat na web
+
+**GitHub Pages** — jednou v `Settings → Pages` přepnout *Source* na
+**GitHub Actions**, pak workflow `.github/workflows/pages.yml` nasadí web sám
+při každém pushi do vývojové větve. Kořen webu je specimen, hra běží na
+`/twin-peaks/`. Token GitHub Actions nesmí Pages založit, proto ten jeden
+ruční krok.
+
+**Jeden soubor bez hostingu** — `node build-standalone.js` vloží engine i data
+přímo do HTML a uloží `dist/twin-peaks-hra.html`. Ten jde poslat mailem nebo
+messengerem a otevřít dvojklikem, bez internetu a bez serveru. Po každé změně
+obsahu je potřeba sestavit znovu.

@@ -35,10 +35,10 @@ jobs:
           printf 'User-agent: *\nDisallow: /\n' > _site/robots.txt
           ls -R _site | head -40
 
+      # Pages musí být v Settings → Pages jednou ručně přepnuté na
+      # "Source: GitHub Actions". Token Actions je sám založit nesmí.
       - name: Nastavit Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Nahrát artefakt
         uses: actions/upload-pages-artifact@v3

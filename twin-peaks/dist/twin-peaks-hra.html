@@ -1,0 +1,3503 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="Twin Peaks: Ztracená kazeta — krátká point-and-click adventura.">
+<meta name="robots" content="noindex, nofollow">
+<title>Twin Peaks: Ztracená kazeta</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #08090a; color: #8d9aa0;
+    font-family: "Courier New", ui-monospace, monospace;
+    overflow: hidden; overscroll-behavior: none;
+  }
+  #stage {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 40%, #14100e 0%, #08090a 70%);
+  }
+  #stage { flex-direction: column; gap: 14px; }
+  #rotate { display: none; margin: 0; font-size: 12px; color: #6d5f4e; letter-spacing: 0.04em; }
+  @media (orientation: portrait) and (max-width: 820px) { #rotate { display: block; } }
+  canvas#game {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    display: block;
+    touch-action: none;
+    cursor: pointer;
+    box-shadow: 0 0 0 1px #2a231d, 0 12px 48px rgba(0,0,0,0.7);
+    background: #000;
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="game" width="640" height="360"></canvas>
+    <p id="rotate">otoč telefon na šířku</p>
+  </div>
+
+  <!-- obsah: data odděleně od kódu -->
+  <script>
+/* assets/manifest.js */
+/* Jediné místo, kde se vyměňuje grafika a zvuk.
+   Dokud soubor neexistuje, engine kreslí placeholder — hra běží dál.
+   Pozadí místnosti: 640×316 px. Postavy: výška ~52 px, kotva dole uprostřed. */
+window.TP_MANIFEST = {
+  images: {
+    // pozadí místností
+    bg_diner: 'assets/bg_diner.png',
+    bg_mapa: 'assets/bg_mapa.png',
+    bg_hotel: 'assets/bg_hotel.png',
+    bg_chodba: 'assets/bg_chodba.png',
+    bg_pokoj315: 'assets/bg_pokoj315.png',
+    bg_stanice: 'assets/bg_stanice.png',
+    bg_chatka: 'assets/bg_chatka.png',
+    bg_les: 'assets/bg_les.png',
+    bg_diner2: 'assets/bg_diner2.png',
+    // postavy
+    natalie: 'assets/natalie.png',
+    cooper: 'assets/cooper.png',
+    // portréty do dialogového okna (64×64)
+    natalie_portrait: 'assets/natalie_portrait.png',
+    cooper_portrait: 'assets/cooper_portrait.png',
+  },
+  audio: {
+    // hudba a ruchy; klíče odpovídají op. {music:'...'} a {sfx:'...'}
+    diner: null,
+    town: null,
+    woods: null,
+    red: null,
+    take: null,
+    tape: null,
+    sting: null,
+  },
+};
+
+  </script>
+  <script>
+/* src/data/actors.js */
+/* Postavy: jen popis vzhledu (placeholder) a barva replik.
+   Až budou sprity, stačí doplnit `sprite` / `portraitImg` z manifestu. */
+(function () {
+  const TP = (window.TP = window.TP || {});
+  TP.data = TP.data || {};
+
+  TP.data.actors = {
+    natalie: {
+      name: 'Natálie', color: '#e8dcc0', height: 52, longHair: true,
+      apron: true, apronColor: '#efe7d8',
+      colors: { skin: '#e2b38d', hair: '#4a2c1b', top: '#7a3f46', bottom: '#2b2f38' },
+      sprite: 'natalie', portraitImg: 'natalie_portrait',
+    },
+    cooper: {
+      name: 'Dale Cooper', color: '#cfd8dc', height: 54, tie: '#a81c22',
+      colors: { skin: '#dcb08a', hair: '#241a12', top: '#22252b', bottom: '#191c21' },
+      sprite: 'cooper', portraitImg: 'cooper_portrait',
+    },
+    norma: {
+      name: 'Norma Jennings', color: '#f0c060', height: 52, longHair: true,
+      apron: true, apronColor: '#e4dfd2',
+      colors: { skin: '#e0b48e', hair: '#5a3a22', top: '#8c4a52', bottom: '#33353c' },
+    },
+    ben: {
+      name: 'Ben Horne', color: '#f0c060', height: 53, tie: '#2f5d3a',
+      colors: { skin: '#dcae86', hair: '#3a2a1c', top: '#4a4433', bottom: '#33302a' },
+    },
+    jerry: {
+      name: 'Jerry Horne', color: '#e0a06a', height: 50, hat: '#3b2e24',
+      colors: { skin: '#d8a880', hair: '#3a2a1c', top: '#b0813f', bottom: '#33302b' },
+    },
+    lucy: {
+      name: 'Lucy Moran', color: '#f0a8c0', height: 51, longHair: true,
+      colors: { skin: '#e6bb94', hair: '#c9a04a', top: '#c66f92', bottom: '#4a4a63' },
+    },
+    andy: {
+      name: 'Andy Brennan', color: '#c8b48a', height: 53, hat: '#4a3f2a',
+      colors: { skin: '#e0b48e', hair: '#5a4630', top: '#6b6045', bottom: '#4a4335' },
+    },
+    harry: {
+      name: 'šerif Harry Truman', color: '#c8b48a', height: 54, hat: '#4a3f2a',
+      colors: { skin: '#dcae86', hair: '#2e2419', top: '#6b6045', bottom: '#4a4335' },
+    },
+    hawk: {
+      name: 'Hawk', color: '#c8b48a', height: 54, longHair: true,
+      colors: { skin: '#c99468', hair: '#181410', top: '#6b6045', bottom: '#4a4335' },
+    },
+    logLady: {
+      name: 'Log Lady', color: '#cbbfa6', height: 50, glasses: true, longHair: true,
+      colors: { skin: '#dcb896', hair: '#8a7a63', top: '#5c5243', bottom: '#3c372d' },
+    },
+    lyra: {
+      name: 'Lyra', color: '#d8b98a', height: 26, shape: 'dog',
+      colors: { top: '#8a5f33', hair: '#5a3c1f' },
+    },
+    pokojska: {
+      name: 'pokojská', color: '#d8dcd8', height: 51, longHair: true,
+      apron: true, apronColor: '#dfe4e2',
+      colors: { skin: '#d8a880', hair: '#3a2a1c', top: '#55606b', bottom: '#3a4048' },
+    },
+    hostA: { name: 'řidič náklaďáku', color: '#c8bba0', height: 52, hat: '#5a4a33', colors: { skin: '#d8a880', hair: '#4a3a28', top: '#4a5a4a', bottom: '#33383a' } },
+    hostB: { name: 'žena s kloboukem', color: '#c8bba0', height: 50, longHair: true, colors: { skin: '#e2b894', hair: '#7a6a58', top: '#7a5a72', bottom: '#3a3540' } },
+    hostC: { name: 'pán s novinami', color: '#c8bba0', height: 51, colors: { skin: '#d8ac82', hair: '#8d9aa0', top: '#55606b', bottom: '#3a3f44' } },
+    vypravec: { name: '', color: '#8d9aa0', height: 0 },
+  };
+})();
+
+  </script>
+  <script>
+/* src/data/items.js */
+/* Předměty v inventáři. */
+(function () {
+  const TP = (window.TP = window.TP || {});
+  TP.data = TP.data || {};
+
+  TP.data.items = {
+    diktafon: {
+      name: 'diktafon', acc: 'diktafon', short: 'DIK', color: '#4a5257',
+      takeLine: 'Beru si diktafon. Není Cooperův, ale je přesně jako Cooperův.',
+      look: [{ say: 'Stejný model, stejné oděrky. Na spodku štítek: 315, Great Northern.' },
+             { say: 'Uvnitř kazeta. Hraje jen šum — a pod ním něco, co šum není.' }],
+      failLine: 'Nahrávat teď nemá smysl.',
+    },
+    zapisnik: {
+      name: 'zápisník', acc: 'zápisník', short: 'ZÁP', color: '#a08f76',
+      takeLine: 'Normin zápisník objednávek. Snad mi to odpustí.',
+      look: [{ say: '„Stůl 2: dva koláče, káva. Platil kanadskými. Jerry H.“' },
+             { say: 'Jerry Horne. Seděl přesně tam, kde ležel Cooperův diktafon.' }],
+    },
+    hrnek: {
+      name: 'prázdný hrnek', acc: 'hrnek', short: 'HRN', color: '#d9dcdb',
+      takeLine: 'Cooperův hrnek. Na dně kruh od kávy jako roční kruh stromu.',
+      look: [{ say: 'Něco, co tu někdo zanechal. Ani ho nedopil — odešel uprostřed věty.' }],
+    },
+    kolac: {
+      name: 'koláč s sebou', acc: 'koláč', short: 'KOL', color: '#a81c22',
+      takeLine: 'Višňový, zabalený. Norma říká, že se hodí vždycky.',
+      look: [{ say: 'Višňový koláč v papíru. Pořád ještě teplý.' }],
+    },
+    mouka: {
+      name: 'hrnek mouky', acc: 'mouku', short: 'MOU', color: '#e8dcc0',
+      takeLine: 'Hrnek mouky. V kriminálce se tomu asi říká jinak.',
+      look: [{ say: 'Jemná mouka. Drží se všeho, čeho se dotknu — což je přesně to, co potřebuju.' }],
+    },
+    karta: {
+      name: 'univerzální karta', acc: 'kartu', short: 'KAR', color: '#f0c060',
+      takeLine: 'Univerzální karta. Otevře všechno v hotelu, prý i věci, co otevřené být nemají.',
+      look: [{ say: 'Plastová karta bez popisu. Ben Horne ji hlídá míň než svoje historky o Kanadě.' }],
+    },
+    uniforma: {
+      name: 'uniforma pokojské', acc: 'uniformu', short: 'UNI', color: '#55606b',
+      takeLine: 'Uniforma a gumové rukavice. Dneska jsem servírka i pokojská.',
+      look: [{ say: 'Šedomodrá uniforma a rukavice. V rukavicích nedělám otisky — to se hodí.' }],
+    },
+    uctenka: {
+      name: 'účtenka z Kanady', acc: 'účtenku', short: 'ÚČT', color: '#d8cba8',
+      takeLine: 'Účtenka. Z místa, kde platí jiné peníze.',
+      look: [{ say: '„Bar Rendez-vous, Kanada.“ Datum: včera. Dvě whisky a telefon.' }],
+    },
+    paska: {
+      name: 'lepicí páska', acc: 'pásku', short: 'PÁS', color: '#c9903a',
+      takeLine: 'Kus lepicí pásky z koše. Na lepivé straně je krásný otisk prstu.',
+      look: [{ say: 'Na pásce je otisk palce. Někdo ji odtrhl v rychlosti — něco odebral.' }],
+    },
+    kapesnik: {
+      name: 'kapesník', acc: 'kapesník', short: 'KAP', color: '#efe7d8',
+      takeLine: 'Kapesník. Na téhle stanici spotřební materiál.',
+      look: [{ say: 'Bílý kapesník. Lucy jich má v šuplíku dvě krabice, a ví proč.' }],
+    },
+    souprava: {
+      name: 'souprava na otisky', acc: 'soupravu', short: 'SOU', color: '#2c4a30',
+      takeLine: 'Souprava na otisky. Lucy říká, že ji mám vrátit čistou.',
+      look: [{ say: 'Štěteček, fólie a karta se vzorky otisků z kartotéky. Chybí jen prášek.' }],
+    },
+    mapa: {
+      name: 'mapa lesa', acc: 'mapu', short: 'MAP', color: '#6f8f5e',
+      takeLine: 'Mapa. Hawk na ni nakreslil křížek a pod něj jednu větu.',
+      look: [{ say: 'Ghostwood. Křížek u starého pařezu a Hawkův vzkaz: „Nejdřív navštivte Log Lady.“' }],
+    },
+  };
+
+  /* Kombinace předmětů. Klíčová logika hry — otisky. */
+  TP.data.items.mouka.combine = {
+    paska: [
+      {
+        if: { has: 'souprava' },
+        then: [
+          { say: 'Štětečkem nanesu mouku na pásku. Prach se chytí přesně tam, kde má.' },
+          { sfx: 'flag' },
+          { say: 'Otisk je čitelný. Porovnám ho s kartou z kartotéky…' },
+          { flag: 'otiskyShoda' },
+          { say: 'Jerry Horne. Shoda. Ten otisk sedí jako klíč do zámku.' },
+        ],
+        else: [{ say: 'Sypat mouku na pásku v ruce? Takhle si jen umažu zástěru. Potřebuju pořádnou soupravu.' }],
+      },
+    ],
+  };
+  TP.data.items.souprava.combine = {
+    paska: [{ say: 'Souprava sama otisk nevyvolá. Chce to prášek — nebo něco, co se prášku hodně podobá.' }],
+    mouka: [{ say: 'Mouka i souprava. Teď potřebuju plochu, na které někdo nechal prst.' }],
+  };
+  TP.data.items.diktafon.combine = {
+    zapisnik: [{ say: 'Diktafon a zápisník. Dvě verze jednoho rána, obě neúplné.' }],
+  };
+  TP.data.items.kolac.combine = {
+    hrnek: [{ say: 'Koláč a prázdný hrnek. Vypadá to skoro jako Cooperovo ráno.' }],
+  };
+})();
+
+/* Konvice je jen tutoriálový předmět — po dolití se vrací na plotnu. */
+(function () {
+  const TP = window.TP;
+  TP.data.items.konvice = {
+    name: 'konvice s kávou', acc: 'konvici', short: 'KÁV', color: '#2a231d',
+    takeLine: 'Beru konvici. Norma říká: do tří čtvrtin, jinak to nedojdou.',
+    look: [{ say: 'Skleněná konvice. Káva v ní je černá jako říjnové ráno.' }],
+    failLine: 'Tohle polít kávou by nepomohlo ničemu.',
+  };
+})();
+
+  </script>
+  <script>
+/* src/data/dialogues.js */
+/* Dialogové stromy. Uzel: by (kdo mluví), text (řádek nebo pole řádků),
+   do (akce), next (další uzel) nebo choices (volby). */
+(function () {
+  const TP = (window.TP = window.TP || {});
+  TP.data = TP.data || {};
+
+  TP.data.dialogues = {
+
+    uvod: {
+      start: 'a',
+      nodes: {
+        a: { by: 'cooper', text: [
+          'Diane, sedm hodin a dvanáct minut. Double R Diner. Káva je horká, koláč čerstvý a svět zatím drží pohromadě.',
+          'Vracím se od šerifa a… Diane, tohle není můj diktafon.',
+        ], next: 'b' },
+        b: { by: 'natalie', text: 'Vypadá stejně. Stejný model, stejný škrábanec na boku.', next: 'c' },
+        c: { by: 'cooper', text: 'Přesně tak. Stejný — a přesto cizí. To je v tomhle městě nejnebezpečnější kombinace.', next: 'd' },
+        d: { by: 'cooper', text: 'A hraje jen šum. Někdo si odnesl moji kazetu a nechal mi místo ní ticho.', next: 'e' },
+        e: { by: 'natalie', text: 'Na spodku má štítek. Tři sta patnáct. To je pokoj v Great Northern.', next: 'f' },
+        f: { by: 'cooper', text: [
+          'Natálie, nejde jen o vyměněnou kazetu. Když se v Twin Peaks stane něco malého, je to vždycky dveře k něčemu velkému.',
+        ], next: 'g' },
+        g: { choices: [
+          { text: '„Co mám udělat?“', to: 'h' },
+          { text: '„Proč já? Jsem tu první den.“', to: 'i' },
+          { text: '„A co když se spletete?“', to: 'j' },
+        ] },
+        h: { by: 'cooper', text: 'Zjistěte, kdo tu dnes ráno seděl. Pak jděte tam, kam vás to pošle. A nikam jinam se nedívejte — dívejte se přesně tam.', next: 'k' },
+        i: { by: 'cooper', text: 'Protože si všímáte. Toho štítku jste si všimla vy, a já se na diktafony dívám profesionálně.', next: 'h' },
+        j: { by: 'cooper', text: 'Pak se spletu nahlas a před svědkem. To je jediný způsob, jak se mýlit správně.', next: 'h' },
+        k: { by: 'cooper', text: 'Musím na výslech. S vámi to zvládnu.', do: [{ flag: 'intro' }], next: 'l' },
+        l: { by: 'natalie', text: 'Dobře. Začnu tím, co mám na dosah.', end: true },
+      },
+    },
+
+    cooper_diner: {
+      start: 'a',
+      nodes: {
+        a: { by: 'cooper', text: 'Ještě pořád tady? Kazeta cestuje, Natálie. Kazety mají nohy.', end: true },
+      },
+    },
+
+    norma: {
+      start: 'a',
+      nodes: {
+        a: { by: 'norma', text: 'Jak ti to jde, zlato?', next: 'b' },
+        b: { choices: [
+          { text: '„Kdo tu dnes ráno seděl u pultu?“', to: 'hoste' },
+          { text: '„Můžu si půjčit tvůj zápisník?“', to: 'zapisnik' },
+          { text: '„Co mám dělat?“', to: 'ukol' },
+          { text: '„Nic. Jen se koukám.“', to: 'konec' },
+        ] },
+        hoste: { by: 'norma', text: [
+          'Ráno? Řidič, paní s kloboukem, pán s novinami. A jeden pán v drahém kabátě, co si dal dva koláče.',
+          'Platil kanadskými dolary a tvářil se u toho, jako bych mu měla poděkovat.',
+        ], do: [{ flag: 'jerryZmineny' }], next: 'b' },
+        zapisnik: { by: 'norma', text: 'Zápisník leží na pultu. Ale vrať ho — v něm je celé tohle město seřazené podle objednávek.', next: 'b' },
+        ukol: { by: 'norma', text: 'Nalij kávu všem třem u pultu. Do tří čtvrtin. Kdo nalije až po okraj, tomu nevěřím.', next: 'b' },
+        konec: { by: 'norma', text: 'Jen se koukej. Tady se většina práce udělá koukáním.', end: true },
+      },
+    },
+
+    ben: {
+      start: 'a',
+      nodes: {
+        a: { by: 'ben', text: 'Slečno! Great Northern vítá hosty, dodavatele a dámy se zástěrou. Co pro vás můžu udělat?', next: 'b' },
+        b: { choices: [
+          { text: '„Potřebuju se podívat do pokoje 315.“', to: 'ne' },
+          { text: '„Váš bratr Jerry byl dnes ráno v Double R.“', to: 'jerry', if: 'jerryZmineny' },
+          { text: '„Slyšela jsem, že obchodujete s Kanadou.“', to: 'kanada' },
+          { text: '„Nic, děkuju.“', to: 'konec' },
+        ] },
+        ne: { by: 'ben', text: 'Pokoje svých hostů nedávám ani šerifovi. Zvlášť ne šerifovi. Zvlášť ne dnes.', next: 'b' },
+        jerry: { by: 'ben', text: [
+          'Jerry? Jerry je v Kanadě. Jerry je vždycky v Kanadě, i když stojí vedle mě.',
+          'Ale to vy nechcete slyšet. Vy chcete slyšet o trhu.',
+        ], next: 'b' },
+        kanada: { by: 'ben', text: [
+          'Kanada, slečno! Kdybyste věděla, co to je za trh! Dřevo, ryby, pozemky a lidé, kteří se na všechno usmívají.',
+          'Sedněte si. Řeknu vám o tom všechno. Začneme rokem, kdy jsem tam jel poprvé, a skončíme dnešním ránem.',
+        ], do: [{ flag: 'benRozpovidan' }], next: 'kanada2' },
+        kanada2: { by: 'ben', text: [
+          'Představte si les, který nikdo nepočítá. Představte si dolar, který vypadá jako dolar, ale chová se jinak…',
+        ], next: 'kanada3' },
+        kanada3: { by: 'natalie', text: 'Ben se otočil k oknu a mluví do skla. Na tabuli s klíči se nedívá už půl minuty.', end: true },
+        konec: { by: 'ben', text: 'Kdybyste si to rozmyslela, jsem tady. Vždycky jsem tady.', end: true },
+      },
+    },
+
+    pokojska: {
+      start: 'a',
+      nodes: {
+        a: { by: 'pokojska', text: [
+          'Třináctka chce ručníky, patnáctka nechce nic a ve třistapatnáctce se od včerejška nesvítí.',
+        ], next: 'b' },
+        b: { choices: [
+          { text: '„Kdo bydlí ve 315?“', to: 'kdo' },
+          { text: '„Můžu vám pomoct?“', to: 'pomoc' },
+          { text: '„Nic, jdu dál.“', to: 'konec' },
+        ] },
+        kdo: { by: 'pokojska', text: 'Pán v drahém kabátě. Je tam zapsaný týden a spal tam jednu noc. Ostatní noci má postel ustlanou jako v katalogu.', next: 'b' },
+        pomoc: { by: 'pokojska', text: 'Pomoct? Zlatíčko, tady si každý pomůže hlavně tím, že se netváří, že sem nepatří.', next: 'b' },
+        konec: { by: 'pokojska', text: 'Jen běžte. A rukavice si vemte, jinak vám ruce budou páchnout po chlóru.', end: true },
+      },
+    },
+
+    lucy: {
+      start: 'a',
+      nodes: {
+        a: { by: ['lucy', 'andy'], text: [
+          'Je lososová! Kupovala jsem ji já a na štítku bylo napsáno LOSOSOVÁ.',
+          'Ale ve světle od okna, Lucy, ve světle od okna je broskvová. Já to vidím. Já to prostě vidím.',
+        ], next: 'b' },
+        b: { choices: [
+          { text: '„Lucy, ta barva je jednoznačně lososová.“', to: 'lososova', once: 'lososova' },
+          { text: '„Je to jenom kabelka.“', to: 'spatne', once: 'spatne' },
+          { text: '„Potřebovala bych soupravu na otisky.“', to: 'souprava_hadka',
+            if: { all: [{ not: 'lucyUklidnena' }, { not: 'soupravaPujcena' }] } },
+          { text: '„Potřebovala bych soupravu na otisky.“', to: 'souprava_andy',
+            if: { all: ['lucyUklidnena', { not: 'andyUklidnen' }, { not: 'soupravaPujcena' }] } },
+          { text: '„Potřebovala bych soupravu na otisky.“', to: 'souprava_ano',
+            if: { all: ['lucyUklidnena', 'andyUklidnen', { not: 'soupravaPujcena' }] } },
+          { text: '„Soupravu vrátím čistou, slibuju.“', to: 'souprava_mam', if: 'soupravaPujcena' },
+          { text: '„Co víte o Jerrym Horneovi?“', to: 'jerry', if: 'jerryZmineny' },
+          { text: '„Nic, děkuju.“', to: 'konec' },
+        ] },
+        lososova: { by: 'lucy', text: [
+          'Děkuju. Konečně někdo, kdo má oči.',
+          'Andy má jinak oči taky hezké, ale vidí jimi jenom to, co chce.',
+        ], do: [{ flag: 'lucyUklidnena' }], next: 'b' },
+        spatne: { by: 'lucy', text: 'Jenom kabelka. Jenom. Kabelka.', next: 'spatne2' },
+        spatne2: { by: 'natalie', text: 'To nebylo dobré. Lucy má teď v očích něco, co bych v dokumentaci nazvala „pozdější problém“.', next: 'b' },
+        jerry: { by: 'lucy', text: [
+          'Jerry Horne? Ten sem chodí dvakrát do roka a pokaždé se ptá, jestli se změnily zákony.',
+          'A pokaždé mu řeknu, že zákony ne, ale formuláře ano.',
+        ], next: 'b' },
+        souprava_hadka: { by: 'lucy', text: [
+          'Otisky? Teď? Andy pláče u kopírky a vy chcete otisky.',
+          'Nejdřív někdo musí rozhodnout, jakou barvu má ta kabelka. Pak se tady zase začne pracovat.',
+        ], next: 'b' },
+        souprava_andy: { by: 'lucy', text: [
+          'Souprava je ve skříňce a klíč mám já.',
+          'Ale Andy takhle brečet nemůže, to pak celá stanice vypadá, jako by se něco stalo. Udělejte s ním něco. Prosím.',
+        ], next: 'b' },
+        souprava_ano: { by: 'lucy', text: [
+          'Tak dobře. Lososová je lososová a Andy se usmívá. To je na jedno dopoledne hodně.',
+          'Tady je souprava. Štěteček, fólie a karta se vzorky z kartotéky. Prášek si musíte sehnat sama — ten nám došel.',
+        ], do: [{ get: 'souprava' }, { flag: 'soupravaPujcena' }], next: 'souprava_rada' },
+        souprava_rada: { by: 'lucy', text: 'Na otisk stačí cokoli jemného a sypkého. V Double R toho mají plný pult.', next: 'b' },
+        souprava_mam: { by: 'lucy', text: 'To doufám. Minule ji vrátil Andy a byla v ní svačina.', next: 'b' },
+        konec: { by: 'lucy', text: 'Mějte se. A kdyby vám někdo tvrdil, že je to broskvová, nevěřte mu.', end: true },
+      },
+    },
+
+    andy: {
+      start: 'a',
+      nodes: {
+        a: { by: 'andy', text: [
+          'Já netvrdím, že Lucy nemá pravdu. Já jenom říkám, že to světlo… to světlo lže.',
+        ], next: 'b' },
+        b: { choices: [
+          { text: '„Andy, jste v pořádku?“', to: 'brek' },
+          { text: '„Viděl jste dnes ráno Jerryho Hornea?“', to: 'jerry', if: 'jerryZmineny' },
+          { text: '„Zatím nashledanou.“', to: 'konec' },
+        ] },
+        brek: { by: 'andy', text: [
+          'Jsem. Úplně. Jenom mám… něco v oku. Obě oči. Celý obličej.',
+        ], next: 'b' },
+        jerry: { by: 'andy', text: 'Viděl jsem ho jet k lesu. Mával mi. Já mu mával taky, protože to se dělá.', next: 'b' },
+        konec: { by: 'andy', text: 'Nashledanou. A opatrně u lesa, tam je vlhko a člověk tam snadno dostane rýmu. Nebo něco jiného.', end: true },
+      },
+    },
+
+    hawk: {
+      start: 'a',
+      nodes: {
+        a: { by: 'hawk', text: 'Slyšel jsem, že máte v kapse cizí hlas.', next: 'b' },
+        b: { choices: [
+          { text: '„Mám shodu otisků. Jerry Horne.“', to: 'mapa', if: 'otiskyShoda' },
+          { text: '„Hledám někoho, kdo vzal Cooperovi kazetu.“', to: 'hledam' },
+          { text: '„Co je Ghostwood?“', to: 'ghostwood' },
+          { text: '„Zatím děkuju.“', to: 'konec' },
+        ] },
+        hledam: { by: 'hawk', text: [
+          'Pak potřebujete důkaz, ne dojem. Dojem vám v lese nepomůže — les má vlastní dojmy.',
+        ], next: 'b' },
+        ghostwood: { by: 'hawk', text: 'Les. Starší než město a trpělivější. Lidé tam chodí, když chtějí něco slyšet a bojí se, že by to doma slyšel někdo další.', next: 'b' },
+        mapa: { by: 'hawk', text: [
+          'Otisk je jméno, které se nedá odvolat. Dobrá práce.',
+          'Tady je mapa. Křížek je u starého pařezu na kraji Ghostwoodu — tam Jerry sedává.',
+        ], do: [{ get: 'mapa' }, { flag: 'mapaZiskana' }], next: 'mapa2' },
+        mapa2: { by: 'hawk', text: 'A pod křížek jsem vám napsal jednu větu. Nejdřív navštivte Log Lady.', next: 'mapa3' },
+        mapa3: { choices: [
+          { text: '„Proč nejdřív Log Lady?“', to: 'proc' },
+          { text: '„Dobře. Díky, Hawku.“', to: 'konec' },
+        ] },
+        proc: { by: 'hawk', text: 'Protože les vás pustí dovnitř vždycky. Otázka je, jestli víte, kam v něm jít. To polínko ví.', next: 'mapa3' },
+        konec: { by: 'hawk', text: 'Jděte. A dívejte se pod nohy i nad sebe.', end: true },
+      },
+    },
+
+    lyra: {
+      start: 'a',
+      nodes: {
+        a: { by: 'natalie', text: 'Pohladím ji. Opře se mi o nohu celou vahou, jako by mě chtěla někam posunout.', next: 'b' },
+        b: { by: 'lucy', text: [
+          'To je Lyra. Je to nejlepší zaměstnanec téhle stanice a nikdy nechodí pozdě.',
+        ], do: [{ sfx: 'dog' }], next: 'c' },
+        c: { by: 'natalie', text: 'Lyra se na mě podívá a pak na dveře. Dvakrát. Jako by mi dávala rozvrh.', end: true },
+      },
+    },
+
+    loglady: {
+      start: 'a',
+      nodes: {
+        a: { by: 'logLady', text: 'Polínko dnes ráno mlčelo. Mlčení je taky informace.', next: 'b' },
+        b: { choices: [
+          { text: '„Potřebuju vědět, kde v lese sedává Jerry Horne.“', to: 'hadanka' },
+          { text: '„Co říká polínko o té kazetě?“', to: 'kazeta' },
+          { text: '„Co mám před polínko položit?“', to: 'hadanka' },
+          { text: '„Nic. Promiňte za vyrušení.“', to: 'konec' },
+        ] },
+        kazeta: { by: 'logLady', text: [
+          'Na kazetě je hlas, který mluví do noci. Noc mu odpověděla a on si to zapsal.',
+          'Až to pustíte obráceně, uslyšíte odpověď. Ne otázku.',
+        ], next: 'b' },
+        hadanka: { by: 'logLady', text: [
+          'Polínko promluví, když bude přítomno něco zanechaného, něco odebraného a něco darovaného.',
+          'Položte to sem. Polínko pozná rozdíl, i když vy ne.',
+        ], do: [{ flag: 'hadankaZnama' }], next: 'b' },
+        konec: { by: 'logLady', text: 'Jděte. Ale vraťte se, než se setmí. Po setmění mluví polínko o jiných věcech.', end: true },
+      },
+    },
+
+    polinko_mluvi: {
+      start: 'a',
+      nodes: {
+        a: { by: 'logLady', text: [
+          'Tři věci jsou na místě. Poslouchejte.',
+        ], do: [{ sfx: 'sting' }], next: 'b' },
+        b: { by: 'logLady', text: [
+          'Polínko říká: na východ od cesty stojí pařez, který byl kdysi nejvyšší strom.',
+          'Sedí na něm muž v drahém kabátě a poslouchá něco, čemu nerozumí. Pouští to pořád dokola.',
+        ], next: 'c' },
+        c: { by: 'logLady', text: 'A polínko dodává: ten muž není zlý. Je jenom vyděšený. To je většinou horší.', do: [{ flag: 'polinkoPromluvilo' }], next: 'd' },
+        d: { by: 'natalie', text: 'Ghostwood. Teď už vím, kam v tom lese jít.', end: true },
+      },
+    },
+
+    jerry: {
+      start: 'a',
+      nodes: {
+        a: { by: 'jerry', text: [
+          'Jestli jdete pro podpis, tak nepodepisuju. Jestli jdete pro kabát, tak ho nedám.',
+        ], next: 'b' },
+        b: { choices: [
+          { text: '„Vzal jste agentu Cooperovi diktafon.“', to: 'popira' },
+          { text: '„Máme váš otisk na pásce z pokoje 315.“', to: 'priznani', if: 'otiskyShoda' },
+          { text: '„Platil jste v Double R kanadskými dolary.“', to: 'kanada', if: 'jerryZmineny' },
+          { text: '(zatím nic neříct)', to: 'konec' },
+        ] },
+        popira: { by: 'jerry', text: [
+          'Diktafon? Já mám diktafonů doma šest. Proč bych bral cizí?',
+          'Tenhle je… tenhle je půjčený. Od kamaráda. Který neexistuje.',
+        ], next: 'b' },
+        kanada: { by: 'jerry', text: 'Kanadskými? To dělám z hrdosti. A protože jsem zapomněl vyměnit peníze. Obojí je pravda.', next: 'b' },
+        priznani: { by: 'jerry', text: [
+          'Dobře. Dobře!',
+          'Myslel jsem, že si tam nahrál něco o našich rodinných obchodech. O Bennym, o mně, o věcech, co se nezapisují.',
+          'Tak jsem vyměnil kazety. Vyměnil jsem i ten stroj, aby si toho nevšiml. A pak jsem si to pustil.',
+        ], do: [{ flag: 'jerryPriznal' }], next: 'priznani2' },
+        priznani2: { by: 'jerry', text: [
+          'A víte, co tam je? Šum. Jenom šum. Poslouchám to od rána a nic z toho nedává smysl.',
+        ], next: 'priznani3' },
+        priznani3: { by: 'natalie', text: 'Já vím, co s tím. Ten hlas se musí pustit obráceně.', end: true },
+        konec: { by: 'jerry', text: 'Tak si sedněte. Nebo nesedejte. Já tady stejně sedím za oba.', end: true },
+      },
+    },
+
+    finale: {
+      start: 'a',
+      nodes: {
+        a: { by: 'natalie', text: 'Páska se rozjede pozpátku. Les ztichne tak náhle, až to zabolí v uších.', next: 'b' },
+        b: { by: 'cooper', text: [
+          'Diane, dnes v noci se mi zdál sen.',
+          'V tom snu mi pomáhala mladá žena, kterou jsem nikdy neviděl.',
+        ], next: 'c' },
+        c: { by: 'cooper', text: [
+          'Tmavé vlasy. Zelené oči. Zástěra z podniku, kde dělají višňový koláč.',
+          'Přišla do města dnes ráno. Ještě o tom neví, ale bude u toho, až se to celé otevře.',
+        ], next: 'd' },
+        d: { by: 'jerry', text: 'To… to jste vy.', next: 'e' },
+        e: { by: 'natalie', text: 'Ta nahrávka je z včerejší noci. Já jsem přijela dneska v šest ráno.', next: 'f' },
+        f: { by: 'cooper', text: 'Diane, dodávám: až ji potkám, poděkuju jí. A objednám dvě kávy.', next: 'g' },
+        g: { by: 'jerry', text: [
+          'Vezměte si to. Prosím. Já to nechci mít ani v kabátě.',
+        ], do: [{ flag: 'kazetaZiskana' }, { music: 'woods' }], next: 'h' },
+        h: { by: 'natalie', text: 'Vracím se do Double R. Někdo tam na mě čeká s kávou a ještě o tom neví.', end: true },
+      },
+    },
+
+    epilog: {
+      start: 'a',
+      nodes: {
+        a: { by: 'cooper', text: 'Natálie. Sedněte si. Tohle je vaše židle, dokud nedopijeme.', next: 'b' },
+        b: { by: 'natalie', text: 'Kazeta je zpátky. Jerry ji vydal sám. A na té nahrávce…', next: 'c' },
+        c: { by: 'cooper', text: [
+          'Já vím, co je na té nahrávce. Nahrál jsem to já.',
+          'Zajímavé je, že jsem to nahrál dřív, než jste přišla do města.',
+        ], next: 'd' },
+        d: { choices: [
+          { text: '„Jak je to možné?“', to: 'sen' },
+          { text: '„A co to znamená?“', to: 'vyznam' },
+          { text: '(mlčet a napít se kávy)', to: 'ticho' },
+        ] },
+        sen: { by: 'cooper', text: 'Sny nevysvětluju, Natálie. Vysvětlený sen přestane pracovat.', next: 'd2' },
+        vyznam: { by: 'cooper', text: 'Znamená to, že jste byla v téhle věci dřív než ona ve vás. To se stává. Tady častěji.', next: 'd2' },
+        ticho: { by: 'cooper', text: 'Výborná odpověď. Nejlepší ze všech, které jsem dnes slyšel.', next: 'd2' },
+        d2: { by: 'cooper', text: [
+          'Dnes jsem se přesvědčil, že nejlepší vyšetřovatelé nenosí odznak. Nosí zástěru a nikdy nezapomenou dolít kávu.',
+        ], next: 'e' },
+        e: { by: 'norma', text: 'Koláč je na podniku. Oba dva.', next: 'f' },
+        f: { by: 'cooper', text: 'Tohle je opravdu skvělá káva.', do: [{ flag: 'dohrano' }], next: 'g' },
+        g: { by: 'natalie', text: 'Venku se zvedá mlha a v lese je o jedno tajemství míň. Zítra v šest.', do: [{ credits: true }], end: true },
+      },
+    },
+  };
+})();
+
+  </script>
+
+  <!-- engine -->
+  <script>
+/* src/engine/util.js */
+/* Twin Peaks: Ztracená kazeta — drobné pomocné funkce. */
+(function () {
+  const TP = (window.TP = window.TP || {});
+
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function dist(x1, y1, x2, y2) { const dx = x2 - x1, dy = y2 - y1; return Math.sqrt(dx * dx + dy * dy); }
+
+  function pointInPoly(x, y, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+
+  function closestOnSegment(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    if (len2 === 0) return [ax, ay];
+    let t = ((px - ax) * dx + (py - ay) * dy) / len2;
+    t = clamp(t, 0, 1);
+    return [ax + dx * t, ay + dy * t];
+  }
+
+  /** Nejbližší bod uvnitř (nebo na hraně) walkboxu. */
+  function clampToPoly(x, y, poly) {
+    if (!poly || poly.length < 3) return [x, y];
+    if (pointInPoly(x, y, poly)) return [x, y];
+    let best = null, bestD = Infinity;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const p = closestOnSegment(x, y, poly[j][0], poly[j][1], poly[i][0], poly[i][1]);
+      const d = dist(x, y, p[0], p[1]);
+      if (d < bestD) { bestD = d; best = p; }
+    }
+    return best || [x, y];
+  }
+
+  /** Zalomení textu na řádky podle šířky v pixelech. */
+  function wrap(ctx, text, maxWidth) {
+    const out = [];
+    String(text).split('\n').forEach((para) => {
+      const words = para.split(' ');
+      let line = '';
+      words.forEach((w) => {
+        const test = line ? line + ' ' + w : w;
+        if (ctx.measureText(test).width > maxWidth && line) { out.push(line); line = w; }
+        else line = test;
+      });
+      out.push(line);
+    });
+    return out;
+  }
+
+  function rectHit(x, y, r) {
+    return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+  }
+
+  TP.util = { clamp, lerp, dist, pointInPoly, closestOnSegment, clampToPoly, wrap, rectHit };
+})();
+
+  </script>
+  <script>
+/* src/engine/assets.js */
+/* Načítání assetů z jednoho manifestu. Když obrázek chybí, scéna se vykreslí
+   placeholderem — díky tomu jde pixelart doplnit později bez zásahu do kódu. */
+(function () {
+  const TP = (window.TP = window.TP || {});
+
+  const assets = {
+    manifest: null,
+    images: {},
+    ready: false,
+
+    load(manifest, done) {
+      this.manifest = manifest || { images: {}, audio: {} };
+      const ids = Object.keys(this.manifest.images || {});
+      if (!ids.length) { this.ready = true; done && done(); return; }
+      let left = ids.length;
+      const tick = () => { if (--left <= 0) { this.ready = true; done && done(); } };
+      ids.forEach((id) => {
+        const img = new Image();
+        img.onload = tick;
+        img.onerror = () => { this.images[id] = null; tick(); };
+        img.src = this.manifest.images[id];
+        this.images[id] = img;
+      });
+    },
+
+    /** Obrázek, nebo null když se nenačetl (pak kreslíme placeholder). */
+    img(id) {
+      const im = id && this.images[id];
+      return im && im.complete && im.naturalWidth > 0 ? im : null;
+    },
+
+    audioSrc(id) {
+      return (this.manifest && this.manifest.audio && this.manifest.audio[id]) || null;
+    },
+  };
+
+  TP.assets = assets;
+})();
+
+  </script>
+  <script>
+/* src/engine/audio.js */
+/* Zvuk. Když v manifestu leží skutečné soubory, hrají se ty; jinak si engine
+   vystačí s jednoduchým syntetizátorem (WebAudio), aby hra nebyla němá. */
+(function () {
+  const TP = (window.TP = window.TP || {});
+
+  const audio = {
+    ctx: null,
+    on: true,
+    musicNodes: [],
+    musicTimer: null,
+    current: null,
+    reversed: false,
+
+    init() {
+      if (this.ctx) return;
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AC();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.28;
+        this.master.connect(this.ctx.destination);
+      } catch (e) { this.ctx = null; }
+    },
+
+    resume() {
+      this.init();
+      if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    },
+
+    toggle() {
+      this.on = !this.on;
+      if (!this.on) this.stopMusic();
+      else if (this.current) this.music(this.current, this.reversed);
+      return this.on;
+    },
+
+    note(freq, dur, type, gain, delay) {
+      if (!this.on || !this.ctx) return;
+      const t0 = this.ctx.currentTime + (delay || 0);
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain || 0.2, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g); g.connect(this.master);
+      osc.start(t0); osc.stop(t0 + dur + 0.05);
+      return osc;
+    },
+
+    /** Obrácená obálka — tón se "nasává" místo doznívání. Pro finále. */
+    noteReverse(freq, dur, type, gain, delay) {
+      if (!this.on || !this.ctx) return;
+      const t0 = this.ctx.currentTime + (delay || 0);
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq * 0.94, t0);
+      osc.frequency.linearRampToValueAtTime(freq, t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain || 0.2, t0 + dur * 0.92);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g); g.connect(this.master);
+      osc.start(t0); osc.stop(t0 + dur + 0.05);
+    },
+
+    sfx(id) {
+      this.init();
+      if (!this.on || !this.ctx) return;
+      const src = TP.assets.audioSrc && TP.assets.audioSrc(id);
+      if (src) { try { const a = new Audio(src); a.volume = 0.6; a.play(); return; } catch (e) { /* fallback níž */ } }
+      switch (id) {
+        case 'click': this.note(880, 0.05, 'square', 0.06); break;
+        case 'take': this.note(523, 0.08, 'triangle', 0.12); this.note(784, 0.10, 'triangle', 0.10, 0.06); break;
+        case 'no': this.note(180, 0.12, 'sawtooth', 0.08); break;
+        case 'flag': this.note(392, 0.12, 'sine', 0.12); this.note(587, 0.18, 'sine', 0.10, 0.09); break;
+        case 'tape': this.note(120, 0.5, 'sawtooth', 0.05); break;
+        case 'sting': this.note(110, 1.4, 'sawtooth', 0.10); this.note(164, 1.4, 'sine', 0.06, 0.05); break;
+        case 'dog': this.note(330, 0.09, 'square', 0.10); this.note(260, 0.12, 'square', 0.08, 0.10); break;
+        default: this.note(440, 0.06, 'sine', 0.08);
+      }
+    },
+
+    /** Smyčka nálady. reverse = pozpátku (finále). */
+    music(id, reverse) {
+      this.init();
+      this.stopMusic();
+      this.current = id;
+      this.reversed = !!reverse;
+      if (!this.on || !this.ctx) return;
+      const themes = {
+        diner: { root: 196.00, chord: [0, 4, 7, 11], step: 1.6, type: 'sine' },
+        town: { root: 146.83, chord: [0, 3, 7, 10], step: 2.0, type: 'triangle' },
+        woods: { root: 110.00, chord: [0, 3, 7, 8], step: 2.4, type: 'sine' },
+        red: { root: 98.00, chord: [0, 1, 6, 7], step: 1.2, type: 'sawtooth' },
+      };
+      const th = themes[id] || themes.diner;
+      let i = 0;
+      const play = () => {
+        const semi = th.chord[i % th.chord.length];
+        const f = th.root * Math.pow(2, semi / 12);
+        const order = this.reversed ? th.chord.length - 1 - (i % th.chord.length) : semi;
+        const freq = this.reversed ? th.root * Math.pow(2, th.chord[order] / 12) * 1.5 : f;
+        if (this.reversed) this.noteReverse(freq, th.step * 0.95, th.type, 0.09);
+        else { this.note(freq, th.step * 0.95, th.type, 0.07); this.note(freq * 2, th.step * 0.5, 'sine', 0.02, th.step * 0.3); }
+        i++;
+      };
+      play();
+      this.musicTimer = setInterval(play, th.step * 1000);
+    },
+
+    stopMusic() {
+      if (this.musicTimer) { clearInterval(this.musicTimer); this.musicTimer = null; }
+    },
+  };
+
+  TP.audio = audio;
+})();
+
+  </script>
+  <script>
+/* src/engine/state.js */
+/* Stav hry: vlajky, inventář, pozice. Ukládá se automaticky do localStorage. */
+(function () {
+  const TP = (window.TP = window.TP || {});
+  const KEY = 'twinpeaks-ztracena-kazeta-v1';
+
+  const state = {
+    room: null,
+    x: 320, y: 300, facing: 1,
+    flags: {},
+    inv: [],
+    seen: {},
+    version: 1,
+
+    reset() {
+      this.room = null;
+      this.flags = {};
+      this.inv = [];
+      this.seen = {};
+      this.x = 320; this.y = 300; this.facing = 1;
+      try { localStorage.removeItem(KEY); } catch (e) { /* soukromý režim */ }
+    },
+
+    flag(name) { return !!this.flags[name]; },
+    setFlag(name, val) {
+      const v = val === undefined ? true : !!val;
+      const changed = !!this.flags[name] !== v;
+      this.flags[name] = v;
+      if (changed) this.save();
+      return changed;
+    },
+
+    has(id) { return this.inv.indexOf(id) >= 0; },
+    add(id) { if (!this.has(id)) { this.inv.push(id); this.save(); } },
+    remove(id) {
+      const i = this.inv.indexOf(id);
+      if (i >= 0) { this.inv.splice(i, 1); this.save(); }
+    },
+
+    markSeen(key) { this.seen[key] = true; this.save(); },
+    wasSeen(key) { return !!this.seen[key]; },
+
+    save() {
+      try {
+        localStorage.setItem(KEY, JSON.stringify({
+          v: this.version, room: this.room, x: this.x, y: this.y,
+          facing: this.facing, flags: this.flags, inv: this.inv, seen: this.seen,
+        }));
+      } catch (e) { /* ukládání není kritické */ }
+    },
+
+    load() {
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (!raw) return false;
+        const d = JSON.parse(raw);
+        if (!d || d.v !== this.version || !d.room) return false;
+        this.room = d.room; this.x = d.x; this.y = d.y; this.facing = d.facing || 1;
+        this.flags = d.flags || {}; this.inv = d.inv || []; this.seen = d.seen || {};
+        return true;
+      } catch (e) { return false; }
+    },
+  };
+
+  TP.state = state;
+})();
+
+  </script>
+  <script>
+/* src/engine/script.js */
+/* Vyhodnocování podmínek a spouštění akcí (skriptovací vrstva nad daty).
+   Akce se dávkují do zásobníku rámců, aby mohly čekat na chůzi, repliku
+   nebo dokončený dialog, aniž by se blokovala smyčka hry. */
+(function () {
+  const TP = (window.TP = window.TP || {});
+
+  const script = {
+    frames: [],
+    blocker: null,
+
+    /** Podmínka: řetězec = vlajka, nebo objekt {not|all|any|has|nohas|flag}. */
+    check(cond) {
+      if (cond === undefined || cond === null) return true;
+      if (typeof cond === 'string') return TP.state.flag(cond);
+      if (Array.isArray(cond)) return cond.every((c) => this.check(c));
+      if (cond.not !== undefined) return !this.check(cond.not);
+      if (cond.all) return cond.all.every((c) => this.check(c));
+      if (cond.any) return cond.any.some((c) => this.check(c));
+      if (cond.has !== undefined) return TP.state.has(cond.has);
+      if (cond.nohas !== undefined) return !TP.state.has(cond.nohas);
+      if (cond.flag !== undefined) return TP.state.flag(cond.flag);
+      if (cond.room !== undefined) return TP.state.room === cond.room;
+      return true;
+    },
+
+    busy() { return this.frames.length > 0 || !!this.blocker; },
+
+    run(ops) {
+      if (!ops) return;
+      const list = Array.isArray(ops) ? ops : [ops];
+      if (!list.length) return;
+      this.frames.push({ ops: list, i: 0 });
+    },
+
+    clear() { this.frames = []; this.blocker = null; },
+
+    update(dt) {
+      let guard = 0;
+      while (guard++ < 200) {
+        if (this.blocker) {
+          if (!this.blocker(dt)) return;
+          this.blocker = null;
+        }
+        if (!this.frames.length) return;
+        const f = this.frames[this.frames.length - 1];
+        if (f.i >= f.ops.length) { this.frames.pop(); continue; }
+        const op = f.ops[f.i++];
+        this.exec(op);
+      }
+    },
+
+    exec(op) {
+      if (!op) return;
+      const g = TP.game;
+
+      if (op.if !== undefined) {
+        const branch = this.check(op.if) ? op.then : op.else;
+        if (branch) this.run(branch);
+        return;
+      }
+      if (op.say !== undefined) {
+        const by = op.by || 'natalie';
+        g.showBubble(by, op.say);
+        const dur = Math.max(1100, String(op.say).length * 58);
+        let t = 0;
+        this.blocker = (dt) => {
+          t += dt;
+          if (g.skipRequested) { g.skipRequested = false; g.hideBubble(); return true; }
+          if (t >= dur) { g.hideBubble(); return true; }
+          return false;
+        };
+        return;
+      }
+      if (op.wait !== undefined) {
+        let t = 0;
+        this.blocker = (dt) => { t += dt; return t >= op.wait; };
+        return;
+      }
+      if (op.get !== undefined) {
+        const it = TP.data.items[op.get];
+        TP.state.add(op.get);
+        TP.audio.sfx('take');
+        if (it && op.silent !== true) this.run([{ say: it.takeLine || ('Beru si ' + (it.acc || it.name) + '.') }]);
+        return;
+      }
+      if (op.drop !== undefined) { TP.state.remove(op.drop); return; }
+      if (op.flag !== undefined) { TP.state.setFlag(op.flag, true); TP.audio.sfx('flag'); return; }
+      if (op.unflag !== undefined) { TP.state.setFlag(op.unflag, false); return; }
+      if (op.quiet !== undefined) { TP.state.setFlag(op.quiet, true); return; }
+      if (op.dialog !== undefined) {
+        TP.dialogue.start(op.dialog);
+        this.blocker = () => !TP.dialogue.active;
+        return;
+      }
+      if (op.go !== undefined) {
+        g.changeRoom(op.go, op.at, op.facing);
+        this.blocker = () => !g.fading;
+        return;
+      }
+      if (op.walkTo !== undefined) {
+        g.walkTo(op.walkTo[0], op.walkTo[1]);
+        this.blocker = () => !g.player.walking;
+        return;
+      }
+      if (op.face !== undefined) { g.player.facing = op.face === 'left' ? -1 : 1; return; }
+      if (op.actor !== undefined) {
+        g.moveActor(op.actor, op.to, op.hide);
+        return;
+      }
+      if (op.sfx !== undefined) { TP.audio.sfx(op.sfx); return; }
+      if (op.music !== undefined) { TP.audio.music(op.music, op.reverse); return; }
+      if (op.fx !== undefined) {
+        g.startFx(op.fx, op.duration || 2500);
+        this.blocker = () => !g.fx || g.fx.done;
+        return;
+      }
+      if (op.tint !== undefined) { g.tint = op.tint; return; }
+      if (op.shake !== undefined) { g.shake = op.shake; return; }
+      if (op.end !== undefined) { g.endGame(op.end); return; }
+      if (op.credits !== undefined) { g.endGame(true); return; }
+    },
+  };
+
+  TP.script = script;
+})();
+
+  </script>
+  <script>
+/* src/engine/dialogue.js */
+/* Dialogy jako stromy. Uzel má repliku a buď pokračování, nebo volby. */
+(function () {
+  const TP = (window.TP = window.TP || {});
+
+  const dialogue = {
+    active: false,
+    treeId: null,
+    tree: null,
+    node: null,
+    nodeId: null,
+    lines: [],
+    lineIndex: 0,
+    choices: [],
+    pending: [],
+
+    start(id) {
+      const tree = TP.data.dialogues[id];
+      if (!tree) { console.warn('Neznámý dialog:', id); return; }
+      this.treeId = id;
+      this.tree = tree;
+      this.pending = [];
+      this.active = true;
+      this.goTo(tree.start);
+    },
+
+    goTo(nodeId) {
+      if (!nodeId) { this.end(); return; }
+      const node = this.tree.nodes[nodeId];
+      if (!node) { this.end(); return; }
+      this.nodeId = nodeId;
+      this.node = node;
+      if (node.do) this.applyOps(node.do);
+      if (node.once) TP.state.markSeen('dlg:' + this.treeId + ':' + nodeId);
+      const text = node.text;
+      this.lines = text === undefined ? [] : (Array.isArray(text) ? text.slice() : [text]);
+      this.lineIndex = 0;
+      this.choices = [];
+      if (!this.lines.length) this.afterLines();
+    },
+
+    /** Vlajky a předměty musí platit hned (ovlivňují nabídku voleb). */
+    applyOps(ops) {
+      (Array.isArray(ops) ? ops : [ops]).forEach((op) => {
+        if (!op) return;
+        if (op.flag !== undefined) TP.state.setFlag(op.flag, true);
+        else if (op.unflag !== undefined) TP.state.setFlag(op.unflag, false);
+        else if (op.get !== undefined) { TP.state.add(op.get); TP.audio.sfx('take'); }
+        else if (op.drop !== undefined) TP.state.remove(op.drop);
+        else if (op.sfx !== undefined) TP.audio.sfx(op.sfx);
+        else if (op.music !== undefined) TP.audio.music(op.music, op.reverse);
+        else this.pending.push(op); // zbytek (go, fx, say, end) až po dialogu
+      });
+    },
+
+    afterLines() {
+      const node = this.node;
+      if (node.choices) {
+        this.choices = node.choices.filter((c) => {
+          if (c.if !== undefined && !TP.script.check(c.if)) return false;
+          if (c.once && TP.state.wasSeen('choice:' + this.treeId + ':' + c.once)) return false;
+          return true;
+        });
+        if (!this.choices.length) { this.goTo(node.next); return; }
+        return;
+      }
+      if (node.end) { this.end(); return; }
+      this.goTo(node.next);
+    },
+
+    /** Kliknutí do textu: další řádek, nebo posun na další uzel. */
+    advance() {
+      if (this.choices.length) return;
+      if (this.lineIndex < this.lines.length - 1) { this.lineIndex++; return; }
+      this.afterLines();
+    },
+
+    pick(i) {
+      const c = this.choices[i];
+      if (!c) return;
+      if (c.once) TP.state.markSeen('choice:' + this.treeId + ':' + c.once);
+      this.choices = [];
+      TP.audio.sfx('click');
+      if (c.do) this.applyOps(c.do);
+      if (c.end) { this.end(); return; }
+      this.goTo(c.to);
+    },
+
+    end() {
+      this.active = false;
+      this.tree = null; this.node = null; this.choices = []; this.lines = [];
+      const ops = this.pending;
+      this.pending = [];
+      if (ops.length) TP.script.run(ops);
+    },
+
+    currentLine() { return this.lines[this.lineIndex]; },
+    speaker() {
+      const node = this.node;
+      if (!node) return null;
+      const by = Array.isArray(node.by) ? node.by[Math.min(this.lineIndex, node.by.length - 1)] : node.by;
+      return by || 'natalie';
+    },
+  };
+
+  TP.dialogue = dialogue;
+})();
+
+  </script>
+  <script>
+/* src/engine/render.js */
+/* Vykreslování: scéna z tvarů (placeholdery), postavy, bubliny, dialog a UI.
+   Každý tvar i postava se dá vyměnit za obrázek z manifestu (t:'img'). */
+(function () {
+  const TP = (window.TP = window.TP || {});
+  const U = TP.util;
+
+  const W = 640, H = 360, SCENE_H = 316, BAR_Y = 316, BAR_H = 44;
+  const SLOT = 30, SLOT_GAP = 4, SLOT_X = 10, SLOT_Y = 322;
+
+  const pal = {
+    ink: '#0d0b0c', night: '#161314', wood: '#5a4636', woodDark: '#3b2e24',
+    cream: '#e8dcc0', paper: '#d8cba8', fir: '#1b2f1f', firDark: '#0f1a12',
+    red: '#a81c22', redBright: '#d02b2b', gold: '#f0c060', amber: '#c9903a',
+    fog: '#8d9aa0', steel: '#4a5257', bone: '#efe7d8', shadow: 'rgba(0,0,0,0.35)',
+  };
+
+  /** Ztmavení / zesvětlení hex barvy — kvůli hranám a stínům. */
+  function shade(hex, amt) {
+    if (typeof hex !== 'string' || hex[0] !== '#' || hex.length < 7) return hex;
+    const n = parseInt(hex.slice(1, 7), 16);
+    const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+      const out = amt >= 0 ? v + (255 - v) * amt : v * (1 + amt);
+      return Math.max(0, Math.min(255, Math.round(out)));
+    });
+    return 'rgb(' + ch[0] + ',' + ch[1] + ',' + ch[2] + ')';
+  }
+
+  function font(size, bold) {
+    return (bold ? 'bold ' : '') + size + 'px "Courier New", ui-monospace, monospace';
+  }
+
+  const render = {
+    pal, W, H, SCENE_H, BAR_Y, BAR_H, SLOT, SLOT_GAP, SLOT_X, SLOT_Y, font,
+
+    /* ---------- tvary scény ---------- */
+    shape(ctx, s) {
+      if (s.if !== undefined && !TP.script.check(s.if)) return;
+      const img = s.id ? TP.assets.img(s.id) : null;
+      if (img) { ctx.drawImage(img, s.x | 0, s.y | 0, s.w || img.width, s.h || img.height); return; }
+      ctx.save();
+      if (s.alpha !== undefined) ctx.globalAlpha = s.alpha;
+      switch (s.t) {
+        case 'rect':
+          ctx.fillStyle = s.c; ctx.fillRect(s.x, s.y, s.w, s.h);
+          if (s.b) { // malovaná hrana: světlo shora, stín zdola
+            const lit = s.b === 'down' ? -0.28 : 0.22, dim = s.b === 'down' ? 0.18 : -0.3;
+            ctx.fillStyle = shade(s.c, lit);
+            ctx.fillRect(s.x, s.y, s.w, 1); ctx.fillRect(s.x, s.y, 1, s.h);
+            ctx.fillStyle = shade(s.c, dim);
+            ctx.fillRect(s.x, s.y + s.h - 1, s.w, 1); ctx.fillRect(s.x + s.w - 1, s.y, 1, s.h);
+          }
+          if (s.o) { ctx.strokeStyle = s.o; ctx.lineWidth = 1; ctx.strokeRect(s.x + 0.5, s.y + 0.5, s.w - 1, s.h - 1); }
+          break;
+        case 'wood': {
+          // prkna s kresbou dřeva; deterministicky, ať scéna nešumí
+          const ph = s.plank || 14, vert = s.vertical === true;
+          ctx.fillStyle = s.c; ctx.fillRect(s.x, s.y, s.w, s.h);
+          const span = vert ? s.w : s.h;
+          for (let i = 0; i * ph < span; i++) {
+            const off = i * ph;
+            const seed = (i * 73 + s.x + s.y) % 97;
+            ctx.fillStyle = shade(s.c, seed % 3 === 0 ? 0.05 : -0.05);
+            if (vert) ctx.fillRect(s.x + off, s.y, Math.min(ph, s.w - off), s.h);
+            else ctx.fillRect(s.x, s.y + off, s.w, Math.min(ph, s.h - off));
+            ctx.fillStyle = shade(s.c, -0.34);
+            if (vert) ctx.fillRect(s.x + off, s.y, 1, s.h);
+            else ctx.fillRect(s.x, s.y + off, s.w, 1);
+            ctx.fillStyle = shade(s.c, 0.12);
+            if (vert) ctx.fillRect(s.x + off + 1, s.y, 1, s.h);
+            else ctx.fillRect(s.x, s.y + off + 1, s.w, 1);
+            // letokruhy
+            ctx.fillStyle = shade(s.c, -0.18);
+            for (let g = 0; g < 3; g++) {
+              const t = ((seed * (g + 3)) % 80) / 100;
+              if (vert) ctx.fillRect(s.x + off + 3 + (g * 3) % ph, s.y + t * s.h, 1, s.h * 0.12);
+              else ctx.fillRect(s.x + t * s.w, s.y + off + 3 + (g * 3) % ph, s.w * 0.1, 1);
+            }
+          }
+          break;
+        }
+        case 'plaster': {
+          // omítka: základ + skvrny a oděrky, aby stěna nebyla plochá
+          ctx.fillStyle = s.c; ctx.fillRect(s.x, s.y, s.w, s.h);
+          for (let i = 0; i < (s.n || 40); i++) {
+            const a = (i * 137) % 1000, b = (i * 311) % 1000;
+            const px = s.x + (a / 1000) * s.w, py = s.y + (b / 1000) * s.h;
+            ctx.fillStyle = shade(s.c, i % 2 ? -0.07 : 0.05);
+            ctx.globalAlpha = 0.5;
+            ctx.beginPath();
+            ctx.ellipse(px, py, 8 + (i % 5) * 4, 4 + (i % 3) * 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+          break;
+        }
+        case 'grad': {
+          const g = ctx.createLinearGradient(s.x, s.y, s.horizontal ? s.x + s.w : s.x, s.horizontal ? s.y : s.y + s.h);
+          g.addColorStop(0, s.c1); g.addColorStop(1, s.c2);
+          ctx.fillStyle = g; ctx.fillRect(s.x, s.y, s.w, s.h);
+          break;
+        }
+        case 'poly':
+          ctx.fillStyle = s.c; ctx.beginPath();
+          s.pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+          ctx.closePath(); ctx.fill();
+          break;
+        case 'ell':
+          ctx.fillStyle = s.c; ctx.beginPath();
+          ctx.ellipse(s.x, s.y, s.rx, s.ry, 0, 0, Math.PI * 2); ctx.fill();
+          break;
+        case 'line':
+          ctx.strokeStyle = s.c; ctx.lineWidth = s.w || 1;
+          ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+          break;
+        case 'text':
+          ctx.fillStyle = s.c || pal.bone; ctx.font = font(s.size || 10, s.bold);
+          ctx.textAlign = s.align || 'left'; ctx.textBaseline = 'top';
+          ctx.fillText(s.s, s.x, s.y);
+          break;
+        case 'checker': {
+          const sz = s.size || 12;
+          for (let yy = 0; yy * sz < s.h; yy++) {
+            for (let xx = 0; xx * sz < s.w; xx++) {
+              ctx.fillStyle = (xx + yy) % 2 ? s.c1 : s.c2;
+              const px = s.x + xx * sz, py = s.y + yy * sz;
+              ctx.fillRect(px, py, Math.min(sz, s.x + s.w - px), Math.min(sz, s.y + s.h - py));
+            }
+          }
+          break;
+        }
+        case 'stripes': {
+          const gap = s.gap || 8;
+          ctx.fillStyle = s.c;
+          if (s.vertical === false) for (let yy = s.y; yy < s.y + s.h; yy += gap) ctx.fillRect(s.x, yy, s.w, Math.max(1, s.thick || 2));
+          else for (let xx = s.x; xx < s.x + s.w; xx += gap) ctx.fillRect(xx, s.y, Math.max(1, s.thick || 2), s.h);
+          break;
+        }
+        case 'trees': {
+          // jedle na obzoru
+          const n = s.n || 8;
+          for (let i = 0; i < n; i++) {
+            const bx = s.x + (i + 0.5) * (s.w / n) + ((i * 37) % 11) - 5;
+            const bh = s.h * (0.7 + ((i * 53) % 30) / 100);
+            ctx.fillStyle = i % 2 ? s.c : (s.c2 || s.c);
+            ctx.beginPath();
+            ctx.moveTo(bx, s.y + s.h - bh);
+            ctx.lineTo(bx + (s.tw || 12) / 2, s.y + s.h);
+            ctx.lineTo(bx - (s.tw || 12) / 2, s.y + s.h);
+            ctx.closePath(); ctx.fill();
+          }
+          break;
+        }
+        default: break;
+      }
+      ctx.restore();
+    },
+
+    layer(ctx, list, fg, skipPlaceholders) {
+      if (!list) return;
+      list.forEach((s) => {
+        if (s.z !== undefined) return; // řadí se podle hloubky mezi postavy
+        if (!!s.fg !== !!fg) return;
+        if (skipPlaceholders && !s.keep) return; // scénu kreslí hotové pozadí
+        this.shape(ctx, s);
+      });
+    },
+
+    /* ---------- postavy ---------- */
+    /* Kreslí se dvakrát: nejdřív tmavá silueta o pixel vedle, pak postava.
+       Díky tomu je figura čitelná i proti detailnímu pozadí. */
+    actor(ctx, def, x, y, scale, facing, phase, sitting) {
+      const h = (def.height || 52) * scale;
+      const img = TP.assets.img(def.sprite);
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.38)';
+      ctx.beginPath(); ctx.ellipse(x, y, h * 0.22, h * 0.055, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      if (img) {
+        ctx.drawImage(img, x - (img.width * scale) / 2, y - img.height * scale, img.width * scale, img.height * scale);
+        return;
+      }
+
+      const body = def.shape === 'dog' ? this.dogParts : this.humanParts;
+      const sil = 'rgba(14,10,10,0.55)';
+      ctx.save();
+      body.call(this, ctx, def, x + Math.max(1, h * 0.02), y + 1, h, facing, phase, sitting, sil);
+      body.call(this, ctx, def, x, y, h, facing, phase, sitting, null);
+      ctx.restore();
+    },
+
+    humanParts(ctx, def, x, y, h, facing, phase, sitting, sil) {
+      const c = def.colors || {};
+      const skin = c.skin || '#d9a887', hair = c.hair || '#3b2a1c';
+      const top = c.top || '#5c6b7a', bottom = c.bottom || '#2e3440';
+      const F = (col) => { ctx.fillStyle = sil || col; };
+      const swing = sitting ? 0 : Math.sin(phase) * h * 0.07;
+      const bob = sitting ? 0 : Math.abs(Math.sin(phase)) * h * 0.015;
+      const bw = h * 0.30, bx = x - bw / 2;
+      const hipY = y - (sitting ? h * 0.30 : h * 0.34) - bob;
+      const shoY = y - (sitting ? h * 0.64 : h * 0.74) - bob;
+
+      if (sitting) {
+        const kneeX = x + facing * h * 0.22;
+        F(bottom);
+        ctx.fillRect(Math.min(x, kneeX) - h * 0.04, hipY - h * 0.02, h * 0.30, h * 0.12);
+        ctx.fillRect(kneeX - h * 0.05, hipY, h * 0.10, h * 0.30);
+        F(pal.ink);
+        ctx.fillRect(kneeX - h * 0.06, y - h * 0.04, h * 0.14, h * 0.04);
+      } else {
+        F(bottom);
+        ctx.fillRect(x - h * 0.13 + swing, hipY, h * 0.11, h * 0.34);
+        ctx.fillRect(x + h * 0.02 - swing, hipY, h * 0.11, h * 0.34);
+        F(sil || shade(bottom, -0.4));
+        ctx.fillRect(x - h * 0.13 + swing, hipY, h * 0.03, h * 0.34);
+        ctx.fillRect(x + h * 0.02 - swing, hipY, h * 0.03, h * 0.34);
+        F(pal.ink);
+        ctx.fillRect(x - h * 0.14 + swing, y - h * 0.04, h * 0.13, h * 0.04);
+        ctx.fillRect(x + h * 0.01 - swing, y - h * 0.04, h * 0.13, h * 0.04);
+      }
+
+      // trup + záhyb látky
+      F(top);
+      ctx.fillRect(bx, shoY, bw, hipY - shoY + h * 0.02);
+      F(sil || shade(top, -0.26));
+      ctx.fillRect(bx, shoY, bw * 0.22, hipY - shoY + h * 0.02);
+      F(sil || shade(top, 0.16));
+      ctx.fillRect(bx + bw * 0.74, shoY, bw * 0.12, hipY - shoY + h * 0.02);
+      if (def.apron) {
+        F(def.apronColor || '#e9e4d6');
+        ctx.fillRect(bx + bw * 0.18, shoY + h * 0.12, bw * 0.64, hipY - shoY - h * 0.08);
+        F(sil || shade(def.apronColor || '#e9e4d6', -0.14));
+        ctx.fillRect(bx + bw * 0.18, shoY + h * 0.12, bw * 0.10, hipY - shoY - h * 0.08);
+      }
+      if (def.tie) { F(def.tie); ctx.fillRect(x - h * 0.02, shoY + h * 0.02, h * 0.04, h * 0.18); }
+      // paže
+      F(top);
+      ctx.fillRect(bx - h * 0.07, shoY + h * 0.02, h * 0.07, h * 0.30);
+      ctx.fillRect(bx + bw, shoY + h * 0.02, h * 0.07, h * 0.30);
+      F(skin);
+      ctx.fillRect(bx - h * 0.07, shoY + h * 0.30, h * 0.07, h * 0.06);
+      ctx.fillRect(bx + bw, shoY + h * 0.30, h * 0.07, h * 0.06);
+
+      // hlava
+      const hw = h * 0.26, hh = h * 0.24, hx = x - hw / 2, hy = shoY - hh - h * 0.02;
+      F(skin); ctx.fillRect(hx, hy, hw, hh);
+      F(sil || shade(skin, -0.22));
+      ctx.fillRect(hx + (facing > 0 ? 0 : hw - hw * 0.22), hy, hw * 0.22, hh);
+      ctx.fillRect(hx, hy + hh - h * 0.02, hw, h * 0.02);
+      F(hair);
+      ctx.fillRect(hx - h * 0.01, hy - h * 0.03, hw + h * 0.02, hh * (def.longHair ? 0.42 : 0.34));
+      if (def.longHair) {
+        ctx.fillRect(hx - h * 0.02, hy, h * 0.04, hh * 1.05);
+        ctx.fillRect(hx + hw - h * 0.02, hy, h * 0.04, hh * 1.05);
+      }
+      F(sil || shade(hair, 0.18));
+      ctx.fillRect(hx - h * 0.01, hy - h * 0.03, hw + h * 0.02, h * 0.015);
+      if (def.hat) {
+        F(def.hat);
+        ctx.fillRect(hx - h * 0.05, hy - h * 0.04, hw + h * 0.10, h * 0.03);
+        ctx.fillRect(hx, hy - h * 0.10, hw, h * 0.07);
+        F(sil || shade(def.hat, -0.3));
+        ctx.fillRect(hx - h * 0.05, hy - h * 0.02, hw + h * 0.10, h * 0.012);
+      }
+      if (def.glasses) {
+        F(sil || '#1b1b1b');
+        ctx.fillRect(hx + hw * 0.08, hy + hh * 0.36, hw * 0.84, h * 0.03);
+      } else {
+        F(pal.ink);
+        const ex = facing > 0 ? hw * 0.52 : hw * 0.22;
+        ctx.fillRect(hx + ex, hy + hh * 0.42, h * 0.025, h * 0.03);
+        ctx.fillRect(hx + ex - h * 0.06, hy + hh * 0.42, h * 0.025, h * 0.03);
+      }
+    },
+
+    dog(ctx, def, x, y, scale, facing, phase) {
+      this.actor(ctx, def, x, y, scale, facing, phase, false);
+    },
+
+    dogParts(ctx, def, x, y, h, facing, phase, sitting, sil) {
+      const c = def.colors || {};
+      const fur = c.top || '#6b4a2f', furDark = c.hair || '#4a3220';
+      const F = (col) => { ctx.fillStyle = sil || col; };
+      const swing = Math.sin(phase) * h * 0.12;
+      F(fur);
+      ctx.beginPath(); ctx.ellipse(x, y - h * 0.45, h * 0.42, h * 0.24, 0, 0, Math.PI * 2); ctx.fill();
+      F(sil || shade(fur, -0.22));
+      ctx.beginPath(); ctx.ellipse(x, y - h * 0.34, h * 0.40, h * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+      F(furDark);
+      ctx.fillRect(x - h * 0.32 + swing, y - h * 0.3, h * 0.1, h * 0.3);
+      ctx.fillRect(x + h * 0.22 - swing, y - h * 0.3, h * 0.1, h * 0.3);
+      ctx.fillRect(x - h * 0.18 - swing, y - h * 0.3, h * 0.1, h * 0.3);
+      ctx.fillRect(x + h * 0.08 + swing, y - h * 0.3, h * 0.1, h * 0.3);
+      ctx.fillRect(x - facing * h * 0.46, y - h * 0.72 + Math.sin(phase * 2) * h * 0.06, h * 0.1, h * 0.3);
+      F(fur);
+      ctx.fillRect(x + facing * h * 0.32 - h * 0.14, y - h * 0.95, h * 0.28, h * 0.26);
+      ctx.fillRect(x + facing * h * 0.46 - h * 0.08, y - h * 0.82, h * 0.2 * facing, h * 0.12);
+      F(furDark);
+      ctx.fillRect(x + facing * h * 0.24, y - h * 1.06, h * 0.08, h * 0.12);
+      F(pal.ink);
+      ctx.fillRect(x + facing * h * 0.38, y - h * 0.88, h * 0.04, h * 0.04);
+    },
+
+    portrait(ctx, def, x, y, size) {
+      const c = (def && def.colors) || {};
+      ctx.save();
+      ctx.fillStyle = '#1a1614'; ctx.fillRect(x, y, size, size);
+      ctx.strokeStyle = '#4a3f33'; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+      const img = TP.assets.img(def && def.portraitImg);
+      if (img) { ctx.drawImage(img, x + 1, y + 1, size - 2, size - 2); ctx.restore(); return; }
+      const s = size;
+      // ramena
+      ctx.fillStyle = c.top || '#5c6b7a';
+      ctx.fillRect(x + s * 0.12, y + s * 0.72, s * 0.76, s * 0.28);
+      if (def && def.shape === 'dog') {
+        ctx.fillStyle = c.top || '#6b4a2f';
+        ctx.fillRect(x + s * 0.22, y + s * 0.34, s * 0.56, s * 0.42);
+        ctx.fillStyle = c.hair || '#4a3220';
+        ctx.fillRect(x + s * 0.16, y + s * 0.2, s * 0.14, s * 0.24);
+        ctx.fillRect(x + s * 0.7, y + s * 0.2, s * 0.14, s * 0.24);
+        ctx.fillStyle = pal.ink;
+        ctx.fillRect(x + s * 0.34, y + s * 0.5, s * 0.07, s * 0.07);
+        ctx.fillRect(x + s * 0.59, y + s * 0.5, s * 0.07, s * 0.07);
+        ctx.fillRect(x + s * 0.44, y + s * 0.62, s * 0.12, s * 0.08);
+        ctx.restore(); return;
+      }
+      // hlava
+      ctx.fillStyle = c.skin || '#d9a887';
+      ctx.fillRect(x + s * 0.26, y + s * 0.24, s * 0.48, s * 0.52);
+      ctx.fillStyle = c.hair || '#3b2a1c';
+      ctx.fillRect(x + s * 0.22, y + s * 0.16, s * 0.56, s * 0.18);
+      if (def && def.longHair) {
+        ctx.fillRect(x + s * 0.2, y + s * 0.2, s * 0.08, s * 0.5);
+        ctx.fillRect(x + s * 0.72, y + s * 0.2, s * 0.08, s * 0.5);
+      }
+      if (def && def.hat) {
+        ctx.fillStyle = def.hat;
+        ctx.fillRect(x + s * 0.14, y + s * 0.14, s * 0.72, s * 0.06);
+        ctx.fillRect(x + s * 0.24, y + s * 0.04, s * 0.52, s * 0.12);
+      }
+      ctx.fillStyle = pal.ink;
+      if (def && def.glasses) ctx.fillRect(x + s * 0.28, y + s * 0.44, s * 0.44, s * 0.06);
+      else {
+        ctx.fillRect(x + s * 0.36, y + s * 0.44, s * 0.06, s * 0.06);
+        ctx.fillRect(x + s * 0.58, y + s * 0.44, s * 0.06, s * 0.06);
+      }
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(x + s * 0.42, y + s * 0.62, s * 0.16, s * 0.03);
+      ctx.restore();
+    },
+
+    /* ---------- bublina ---------- */
+    bubble(ctx, b) {
+      if (!b) return;
+      ctx.save();
+      ctx.font = font(10);
+      const maxw = 210;
+      const lines = U.wrap(ctx, b.text, maxw);
+      let wdt = 0;
+      lines.forEach((l) => { wdt = Math.max(wdt, ctx.measureText(l).width); });
+      const bw = wdt + 12, bh = lines.length * 12 + 8;
+      let bx = U.clamp(b.x - bw / 2, 4, W - bw - 4);
+      let by = U.clamp(b.y - bh - 10, 16, SCENE_H - bh - 4);
+      ctx.fillStyle = 'rgba(12,10,10,0.82)';
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.lineWidth = 1;
+      ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+      ctx.fillStyle = b.color || pal.bone;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      lines.forEach((l, i) => ctx.fillText(l, bx + bw / 2, by + 5 + i * 12));
+      ctx.restore();
+    },
+
+    /* ---------- UI ---------- */
+    topBar(ctx, text) {
+      if (!text) return;
+      ctx.save();
+      ctx.font = font(10);
+      const w = ctx.measureText(text).width + 14;
+      ctx.fillStyle = 'rgba(10,9,9,0.72)';
+      ctx.fillRect(W / 2 - w / 2, 2, w, 15);
+      ctx.fillStyle = pal.gold;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(text, W / 2, 10);
+      ctx.restore();
+    },
+
+    inventory(ctx, game) {
+      ctx.save();
+      ctx.fillStyle = '#17120f'; ctx.fillRect(0, BAR_Y, W, BAR_H);
+      ctx.fillStyle = '#3a2d23'; ctx.fillRect(0, BAR_Y, W, 2);
+      const inv = TP.state.inv;
+      for (let i = 0; i < 14; i++) {
+        const x = SLOT_X + i * (SLOT + SLOT_GAP);
+        ctx.fillStyle = '#201914'; ctx.fillRect(x, SLOT_Y, SLOT, SLOT);
+        ctx.strokeStyle = '#332a21'; ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, SLOT_Y + 0.5, SLOT - 1, SLOT - 1);
+        const id = inv[i];
+        if (!id) continue;
+        const it = TP.data.items[id] || {};
+        const sel = game.selected === id;
+        const img = TP.assets.img(it.icon);
+        if (img) ctx.drawImage(img, x + 2, SLOT_Y + 2, SLOT - 4, SLOT - 4);
+        else {
+          ctx.fillStyle = it.color || '#7a6a58';
+          ctx.fillRect(x + 4, SLOT_Y + 4, SLOT - 8, SLOT - 8);
+          ctx.fillStyle = 'rgba(0,0,0,0.45)';
+          ctx.fillRect(x + 4, SLOT_Y + SLOT - 11, SLOT - 8, 7);
+          ctx.fillStyle = pal.bone; ctx.font = font(9, true);
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(it.short || '?', x + SLOT / 2, SLOT_Y + 11);
+        }
+        if (sel) {
+          ctx.strokeStyle = pal.gold; ctx.lineWidth = 2;
+          ctx.strokeRect(x + 1, SLOT_Y + 1, SLOT - 2, SLOT - 2);
+        }
+      }
+      // tlačítka
+      game.buttons = [
+        { id: 'sound', x: 556, y: SLOT_Y, w: 30, h: SLOT, label: TP.audio.on ? '♪' : 'x' },
+        { id: 'menu', x: 592, y: SLOT_Y, w: 38, h: SLOT, label: 'MENU' },
+      ];
+      game.buttons.forEach((b) => {
+        ctx.fillStyle = '#241c16'; ctx.fillRect(b.x, b.y, b.w, b.h);
+        ctx.strokeStyle = '#3d3125'; ctx.lineWidth = 1; ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+        ctx.fillStyle = pal.paper; ctx.font = font(b.id === 'sound' ? 12 : 9, true);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2);
+      });
+      ctx.restore();
+    },
+
+    dialogueBox(ctx, game) {
+      const d = TP.dialogue;
+      if (!d.active || !d.node) return;
+      const who = d.speaker();
+      const def = TP.data.actors[who] || {};
+      const line = d.currentLine();
+
+      ctx.save();
+      ctx.font = font(11);
+      const textLines = line === undefined ? [] : U.wrap(ctx, line, W - 92).slice(0, 3);
+      const nCh = d.choices.length;
+      let h = 16 + textLines.length * 14 + (nCh ? nCh * 15 + 8 : 10);
+      h = Math.max(h, 58);
+      const y0 = Math.max(150, H - h);
+
+      ctx.fillStyle = 'rgba(9,8,8,0.93)'; ctx.fillRect(0, y0, W, H - y0);
+      ctx.fillStyle = '#3a2d23'; ctx.fillRect(0, y0, W, 2);
+
+      const ps = Math.min(46, H - y0 - 12);
+      this.portrait(ctx, def, 9, y0 + 7, ps);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillStyle = def.color || pal.gold;
+      ctx.font = font(9, true);
+      ctx.fillText((def.name || '').toUpperCase(), 64, y0 + 7);
+
+      ctx.font = font(11); ctx.fillStyle = pal.bone;
+      textLines.forEach((l, i) => ctx.fillText(l, 64, y0 + 20 + i * 14));
+
+      game.choiceRects = [];
+      if (nCh) {
+        const startY = y0 + 20 + textLines.length * 14 + 4;
+        d.choices.forEach((c, i) => {
+          const ry = startY + i * 15;
+          const hov = game.hoverChoice === i;
+          ctx.font = font(10);
+          ctx.fillStyle = hov ? pal.gold : '#bfae90';
+          ctx.fillText((hov ? '\u25B8 ' : '  ') + c.text, 58, ry);
+          game.choiceRects.push({ x: 52, y: ry - 3, w: W - 66, h: 14 });
+        });
+      } else {
+        ctx.font = font(8);
+        ctx.fillStyle = '#6d5f4e';
+        ctx.textAlign = 'right';
+        ctx.fillText('klikni pro pokra\u010dov\u00e1n\u00ed', W - 10, H - 11);
+      }
+      ctx.restore();
+    },
+
+    fx(ctx, fx) {
+      if (!fx) return;
+      const p = U.clamp(fx.t / fx.dur, 0, 1);
+      if (fx.type === 'red') {
+        const a = Math.sin(p * Math.PI) * 0.7;
+        ctx.save();
+        ctx.globalAlpha = a * 0.75;
+        ctx.fillStyle = '#7a0f14'; ctx.fillRect(0, 0, W, SCENE_H);
+        ctx.globalAlpha = a;
+        // závěsy
+        ctx.fillStyle = '#5c0b10';
+        for (let x = 0; x < W; x += 24) ctx.fillRect(x, 0, 12, SCENE_H);
+        ctx.fillStyle = '#2a0508';
+        for (let x = 12; x < W; x += 24) ctx.fillRect(x, 0, 4, SCENE_H);
+        // cikcak podlaha
+        ctx.globalAlpha = a * 0.9;
+        ctx.fillStyle = '#efe7d8';
+        for (let x = -20; x < W + 20; x += 40) {
+          ctx.beginPath();
+          ctx.moveTo(x, SCENE_H); ctx.lineTo(x + 20, SCENE_H - 46); ctx.lineTo(x + 40, SCENE_H);
+          ctx.closePath(); ctx.fill();
+        }
+        ctx.restore();
+      } else if (fx.type === 'white') {
+        ctx.save(); ctx.globalAlpha = Math.sin(p * Math.PI); ctx.fillStyle = '#efe7d8';
+        ctx.fillRect(0, 0, W, H); ctx.restore();
+      }
+    },
+
+    /** Malovaná atmosféra: teplé kaluže světla, barevný nádech, tmavé rohy
+        a jemné zrno. Tohle dělá z plochých tvarů kulisu. */
+    atmosphere(ctx, room) {
+      const a = room && room.atmo;
+      if (!a) return;
+      ctx.save();
+      (a.lights || []).forEach((l) => {
+        const g = ctx.createRadialGradient(l[0], l[1], 0, l[0], l[1], l[2]);
+        g.addColorStop(0, 'rgba(' + (l[3] || '255,208,132') + ',' + (l[4] || 0.22) + ')');
+        g.addColorStop(0.6, 'rgba(' + (l[3] || '255,208,132') + ',' + (l[4] || 0.22) * 0.35 + ')');
+        g.addColorStop(1, 'rgba(' + (l[3] || '255,208,132') + ',0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, SCENE_H);
+      });
+      if (a.wash) { ctx.fillStyle = a.wash; ctx.fillRect(0, 0, W, SCENE_H); }
+      const v = a.vignette === undefined ? 0.42 : a.vignette;
+      if (v > 0) {
+        const g = ctx.createRadialGradient(W / 2, SCENE_H * 0.46, SCENE_H * 0.26, W / 2, SCENE_H * 0.5, W * 0.68);
+        g.addColorStop(0, 'rgba(0,0,0,0)');
+        g.addColorStop(0.65, 'rgba(8,6,7,' + (v * 0.35).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(8,6,7,' + v + ')');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, SCENE_H);
+      }
+      if (a.grain !== false) ctx.drawImage(this.grain(), 0, 0);
+      ctx.restore();
+    },
+
+    /** Zrno se vyrobí jednou a pak se jen překrývá. */
+    grain() {
+      if (this._grain) return this._grain;
+      const c = document.createElement('canvas');
+      c.width = W; c.height = SCENE_H;
+      const g = c.getContext('2d');
+      let seed = 1337;
+      const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+      for (let i = 0; i < 5200; i++) {
+        const x = (rnd() * W) | 0, y = (rnd() * SCENE_H) | 0;
+        g.fillStyle = rnd() > 0.5 ? 'rgba(255,240,210,0.045)' : 'rgba(0,0,0,0.055)';
+        g.fillRect(x, y, 1, 1);
+      }
+      this._grain = c;
+      return c;
+    },
+
+    /** Trvalé přebarvení scény — finále: rudá, zbytek vyšedne. */
+    tint(ctx, kind) {
+      if (!kind) return;
+      ctx.save();
+      if (kind === 'red') {
+        ctx.fillStyle = 'rgba(70,78,72,0.28)'; ctx.fillRect(0, 0, W, SCENE_H);
+        ctx.fillStyle = 'rgba(122,15,20,0.34)'; ctx.fillRect(0, 0, W, SCENE_H);
+        ctx.fillStyle = 'rgba(12,4,6,0.30)';
+        ctx.fillRect(0, 0, W, 26); ctx.fillRect(0, SCENE_H - 26, W, 26);
+        ctx.fillRect(0, 0, 26, SCENE_H); ctx.fillRect(W - 26, 0, 26, SCENE_H);
+      }
+      ctx.restore();
+    },
+
+    fade(ctx, alpha) {
+      if (alpha <= 0) return;
+      ctx.save(); ctx.globalAlpha = U.clamp(alpha, 0, 1);
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.restore();
+    },
+  };
+
+  TP.render = render;
+})();
+
+  </script>
+  <script>
+/* src/engine/screens.js */
+/* Titulní obrazovka, menu a závěrečná karta. */
+(function () {
+  const TP = (window.TP = window.TP || {});
+
+  function panelButton(ctx, r, label, hot) {
+    ctx.fillStyle = hot ? '#2e2319' : '#1d1712';
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.strokeStyle = '#4a3b2b'; ctx.lineWidth = 1;
+    ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
+    ctx.fillStyle = '#e8dcc0'; ctx.font = TP.render.font(11, true);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, r.x + r.w / 2, r.y + r.h / 2);
+  }
+
+  TP.screens = {
+    title(ctx, game) {
+      const R = TP.render, W = R.W, H = R.H;
+      ctx.fillStyle = '#0b0f0c'; ctx.fillRect(0, 0, W, H);
+      R.shape(ctx, { t: 'grad', x: 0, y: 0, w: W, h: 200, c1: '#16211a', c2: '#0b0f0c' });
+      R.shape(ctx, { t: 'trees', x: -10, y: 90, w: 300, h: 150, c: '#0d1710', c2: '#101c13', n: 9, tw: 46 });
+      R.shape(ctx, { t: 'trees', x: 360, y: 80, w: 300, h: 170, c: '#0d1710', c2: '#101c13', n: 9, tw: 46 });
+      R.shape(ctx, { t: 'rect', x: 0, y: 236, w: W, h: 124, c: '#080b09' });
+      // silnice
+      R.shape(ctx, { t: 'poly', pts: [[250, 236], [390, 236], [520, 360], [120, 360]], c: '#1a1a1a' });
+      for (let i = 0; i < 5; i++) {
+        const t = i / 5;
+        R.shape(ctx, { t: 'rect', x: 320 - 3 - t * 4, y: 244 + t * 120, w: 6 + t * 8, h: 8 + t * 10, c: '#c9b26a' });
+      }
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillStyle = '#7a0f14'; ctx.font = R.font(30, true);
+      ctx.fillText('TWIN PEAKS', W / 2 + 2, 42);
+      ctx.fillStyle = '#d02b2b';
+      ctx.fillText('TWIN PEAKS', W / 2, 40);
+      ctx.fillStyle = '#e8dcc0'; ctx.font = R.font(15, true);
+      ctx.fillText('Ztracená kazeta', W / 2, 78);
+      ctx.fillStyle = '#8d9aa0'; ctx.font = R.font(9);
+      ctx.fillText('krátká adventura · soukromý dárek pro Natálii', W / 2, 100);
+
+      game.titleRects = [];
+      const bw = 190, bx = W / 2 - bw / 2;
+      if (game.hasSave) {
+        const r = { id: 'continue', x: bx, y: 150, w: bw, h: 26 };
+        panelButton(ctx, r, 'Pokračovat'); game.titleRects.push(r);
+      }
+      const r2 = { id: 'new', x: bx, y: game.hasSave ? 182 : 160, w: bw, h: 26 };
+      panelButton(ctx, r2, 'Nová hra'); game.titleRects.push(r2);
+      const r3 = { id: 'sound', x: bx, y: r2.y + 32, w: bw, h: 22 };
+      panelButton(ctx, r3, 'Zvuk: ' + (TP.audio.on ? 'zapnutý' : 'vypnutý')); game.titleRects.push(r3);
+
+      ctx.fillStyle = '#5c5344'; ctx.font = R.font(8); ctx.textAlign = 'center';
+      ctx.fillText('levý klik = jít a použít · pravý klik nebo podržení = prohlédnout', W / 2, H - 22);
+    },
+
+    menu(ctx, game) {
+      const R = TP.render, W = R.W, H = R.H;
+      ctx.fillStyle = 'rgba(6,5,5,0.78)'; ctx.fillRect(0, 0, W, H);
+      const pw = 220, ph = 168, px = W / 2 - pw / 2, py = H / 2 - ph / 2;
+      ctx.fillStyle = '#12100e'; ctx.fillRect(px, py, pw, ph);
+      ctx.strokeStyle = '#4a3b2b'; ctx.strokeRect(px + 0.5, py + 0.5, pw - 1, ph - 1);
+      ctx.fillStyle = '#d02b2b'; ctx.font = R.font(12, true);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText('MENU', W / 2, py + 12);
+      ctx.fillStyle = '#6d5f4e'; ctx.font = R.font(8);
+      ctx.fillText('hra se ukládá automaticky', W / 2, py + 30);
+      game.menuRects = [
+        { id: 'resume', x: px + 20, y: py + 48, w: pw - 40, h: 24 },
+        { id: 'sound', x: px + 20, y: py + 78, w: pw - 40, h: 24 },
+        { id: 'title', x: px + 20, y: py + 108, w: pw - 40, h: 24 },
+        { id: 'new', x: px + 20, y: py + 136, w: pw - 40, h: 22 },
+      ];
+      panelButton(ctx, game.menuRects[0], 'Pokračovat');
+      panelButton(ctx, game.menuRects[1], 'Zvuk: ' + (TP.audio.on ? 'zap' : 'vyp'));
+      panelButton(ctx, game.menuRects[2], 'Titulní obrazovka');
+      panelButton(ctx, game.menuRects[3], 'Nová hra (smaže postup)');
+    },
+
+    end(ctx, game) {
+      const R = TP.render, W = R.W, H = R.H;
+      ctx.fillStyle = '#0b0708'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#5c0b10';
+      for (let x = 0; x < W; x += 24) ctx.fillRect(x, 0, 12, H);
+      ctx.fillStyle = 'rgba(11,7,8,0.72)'; ctx.fillRect(0, 0, W, H);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillStyle = '#d02b2b'; ctx.font = R.font(22, true);
+      ctx.fillText('KONEC', W / 2, 90);
+      ctx.fillStyle = '#e8dcc0'; ctx.font = R.font(11);
+      const lines = [
+        'Kazeta se vrátila tam, kam patří.',
+        'Káva je čerstvá, koláč taky.',
+        '',
+        'A sen o Natálii zůstal na pásce.',
+      ];
+      lines.forEach((l, i) => ctx.fillText(l, W / 2, 132 + i * 16));
+      ctx.fillStyle = '#6d5f4e'; ctx.font = R.font(9);
+      ctx.fillText('klikni pro návrat na titulní obrazovku', W / 2, H - 40);
+      game.titleRects = [];
+    },
+  };
+})();
+
+  </script>
+
+  <!-- data, která používají logiku hádanek -->
+  <script>
+/* src/data/puzzles.js */
+/* Logika hádanek na jednom místě. Místnosti si odsud berou hotové sekvence
+   akcí, takže se dá vyvážení měnit bez zásahu do enginu. */
+(function () {
+  const TP = (window.TP = window.TP || {});
+  TP.data = TP.data || {};
+
+  const puzzles = {
+    /* --- tutoriál: tři kávy --- */
+    kava: {
+      hosti: {
+        hostA: { flag: 'kavaA', line: 'Řidič mlčky přikývne a hrnek podrží oběma rukama.' },
+        hostB: { flag: 'kavaB', line: '„Díky, zlato. Venku je mlha jako mlíko.“' },
+        hostC: { flag: 'kavaC', line: 'Pán ani nezvedne oči od novin. Hrnek si přitáhne přesně o dva centimetry.' },
+      },
+    },
+    nalij(hostId) {
+      const h = puzzles.kava.hosti[hostId];
+      if (!h) return [{ say: 'Tomu kávu nenaliju.' }];
+      return [
+        { if: h.flag, then: [{ say: 'Tenhle hrnek je plný. Víc kávy už by bylo obtěžování.' }], else: [
+          { say: 'Naliju kávu. Do tří čtvrtin, jak říkala Norma.' },
+          { flag: h.flag },
+          { say: h.line },
+          { if: { all: ['kavaA', 'kavaB', 'kavaC'] }, then: [
+            { by: 'norma', say: 'Tři hrnky a nikomu jsi nešlápla na nohu. Dobrý začátek.' },
+            { flag: 'kavaHotova' },
+            { by: 'norma', say: 'Běž. A drž se dál od lesa, dokud budeš mít mou zástěru.' },
+          ] },
+        ] },
+      ];
+    },
+
+    /* --- Log Lady: zanechané, odebrané, darované --- */
+    obeti: {
+      hrnek: { flag: 'obetZanechane', slovo: 'zanechané',
+        line: 'Polínko je teplé. Hrnek postavím vedle něj na deku.',
+        react: 'Něco zanechaného. Muž, který odešel uprostřed věty.' },
+      paska: { flag: 'obetOdebrane', slovo: 'odebrané',
+        line: 'Pásku položím lepivou stranou vzhůru. Otisk se leskne.',
+        react: 'Něco odebraného. Prst, který si myslel, že ho nikdo nevidí.' },
+      kolac: { flag: 'obetDarovane', slovo: 'darované',
+        line: 'Rozbalím koláč. Višně voní i v téhle zimě.',
+        react: 'Něco darovaného. To je vždycky to nejtěžší.' },
+    },
+    obetuj(itemId) {
+      const o = puzzles.obeti[itemId];
+      if (!o) return null;
+      return [
+        { say: o.line },
+        { drop: itemId },
+        { flag: o.flag },
+        { by: 'logLady', say: o.react },
+        { if: { all: ['obetZanechane', 'obetOdebrane', 'obetDarovane'] },
+          then: [{ dialog: 'polinko_mluvi' }] },
+      ];
+    },
+
+    /* --- otisky (kombinace mouka + páska) je v items.js --- */
+    stav() {
+      return {
+        kava: TP.state.flag('kavaHotova'),
+        jerry: TP.state.flag('jerryZmineny'),
+        karta: TP.state.has('karta'),
+        otisky: TP.state.flag('otiskyShoda'),
+        polinko: TP.state.flag('polinkoPromluvilo'),
+      };
+    },
+  };
+
+  TP.data.puzzles = puzzles;
+})();
+
+  </script>
+  <script>
+/* src/data/rooms.js */
+/* Místnosti. Každá má: pozadí z tvarů (placeholder), walkbox, perspektivní
+   měřítko, postavy a hotspoty. `bg` je id obrázku z manifestu — jakmile se
+   načte, placeholderové tvary se přeskočí (kromě těch s keep:true). */
+(function () {
+  const TP = (window.TP = window.TP || {});
+  TP.data = TP.data || {};
+  const P = TP.data.puzzles;
+
+  const WOOD = '#5a4636', WOOD_D = '#3b2e24', CREAM = '#cbb894', RED = '#8c4a52';
+
+  TP.data.rooms = {
+
+    /* =========================== DOUBLE R DINER =========================== */
+    diner: {
+      id: 'diner', name: 'Double R Diner', bg: 'bg_diner', music: 'diner',
+      start: [330, 292], walk: [[84, 274], [612, 274], [620, 308], [80, 308]],
+      scale: [274, 0.88, 308, 1.06],
+      atmo: {
+        lights: [[140, 60, 170, '255,214,150', 0.26], [534, 60, 150, '224,72,72', 0.12], [330, 210, 220, '255,206,140', 0.12]],
+        wash: 'rgba(70,34,10,0.10)', vignette: 0.44,
+      },
+      art: [
+        /* --- stěna a obklad --- */
+        { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#2a231d' },
+        { t: 'plaster', x: 0, y: 0, w: 640, h: 164, c: '#c4ad87', n: 46 },
+        { t: 'grad', x: 0, y: 0, w: 640, h: 70, c1: 'rgba(40,24,10,0.30)', c2: 'rgba(40,24,10,0)' },
+        { t: 'rect', x: 0, y: 156, w: 640, h: 7, c: '#e2d3ae', b: true },
+        { t: 'rect', x: 0, y: 163, w: 640, h: 77, c: '#7e4249' },
+        { t: 'stripes', x: 0, y: 163, w: 640, h: 77, c: 'rgba(0,0,0,0.13)', gap: 15, thick: 3 },
+        { t: 'stripes', x: 4, y: 163, w: 640, h: 77, c: 'rgba(255,220,200,0.05)', gap: 15, thick: 1 },
+        { t: 'rect', x: 0, y: 236, w: 640, h: 5, c: '#4a2b2e' },
+
+        /* --- okno do mlhy --- */
+        { t: 'rect', x: 22, y: 28, w: 194, h: 120, c: '#4a3b2b', b: true },
+        { t: 'rect', x: 28, y: 34, w: 182, h: 108, c: '#2f251d' },
+        { t: 'grad', x: 31, y: 37, w: 176, h: 102, c1: '#93a2a6', c2: '#d2d8d2' },
+        { t: 'trees', x: 31, y: 74, w: 176, h: 65, c: '#1b2f1f', c2: '#14241a', n: 7, tw: 30 },
+        { t: 'grad', x: 31, y: 104, w: 176, h: 35, c1: 'rgba(206,214,208,0)', c2: 'rgba(206,214,208,0.45)' },
+        { t: 'rect', x: 116, y: 34, w: 5, h: 108, c: '#4a3b2b', b: true },
+        { t: 'rect', x: 28, y: 84, w: 182, h: 4, c: '#4a3b2b', b: true },
+        { t: 'rect', x: 18, y: 146, w: 202, h: 8, c: '#6b543a', b: true },
+        { t: 'rect', x: 182, y: 136, w: 16, h: 12, c: '#8a5f33', b: true },
+        { t: 'ell', x: 190, y: 132, rx: 10, ry: 8, c: '#3f6b42' },
+        { t: 'ell', x: 186, y: 129, rx: 5, ry: 4, c: '#4e7d4a' },
+
+        /* --- neon --- */
+        { t: 'rect', x: 448, y: 30, w: 172, h: 62, c: '#1b1614', b: 'down' },
+        { t: 'rect', x: 452, y: 34, w: 164, h: 54, c: '#120f0d' },
+        { t: 'ell', x: 534, y: 52, rx: 86, ry: 26, c: 'rgba(208,43,43,0.16)' },
+        { t: 'text', x: 534, y: 42, s: 'DOUBLE R', c: '#e0343a', size: 16, bold: true, align: 'center' },
+        { t: 'text', x: 534, y: 64, s: 'D I N E R', c: '#f0c060', size: 9, align: 'center' },
+        { t: 'rect', x: 452, y: 78, w: 164, h: 1, c: 'rgba(240,192,96,0.35)' },
+
+        /* --- lednička s Maxovou kresbou --- */
+        { t: 'rect', x: 54, y: 148, w: 66, h: 92, c: '#b9bdb6', b: true },
+        { t: 'rect', x: 54, y: 148, w: 66, h: 5, c: '#8f938d' },
+        { t: 'rect', x: 54, y: 190, w: 66, h: 2, c: '#8f938d' },
+        { t: 'rect', x: 111, y: 196, w: 5, h: 20, c: '#6d716c', b: true },
+        { t: 'rect', x: 64, y: 166, w: 34, h: 28, c: '#efe7d8', b: true },
+        { t: 'line', x1: 68, y1: 189, x2: 94, y2: 189, c: '#6f8f5e', w: 1 },
+        { t: 'ell', x: 76, y: 180, rx: 6, ry: 5, c: '#8a5f33' },
+        { t: 'rect', x: 82, y: 176, w: 7, h: 4, c: '#8a5f33' },
+        { t: 'line', x1: 70, y1: 184, x2: 66, y2: 190, c: '#8a5f33', w: 1 },
+        { t: 'rect', x: 62, y: 164, w: 4, h: 4, c: '#a81c22' },
+        { t: 'rect', x: 96, y: 164, w: 4, h: 4, c: '#3f6b42' },
+        { t: 'rect', x: 66, y: 200, w: 22, h: 14, c: '#d8cba8', b: true },
+
+        /* --- police, cedule, kávovar --- */
+        { t: 'rect', x: 206, y: 146, w: 220, h: 7, c: '#6b543a', b: true },
+        { t: 'rect', x: 216, y: 134, w: 13, h: 12, c: '#d9dcdb', b: true },
+        { t: 'rect', x: 234, y: 134, w: 13, h: 12, c: '#d9dcdb', b: true },
+        { t: 'rect', x: 252, y: 134, w: 13, h: 12, c: '#d9dcdb', b: true },
+        { t: 'rect', x: 272, y: 132, w: 15, h: 14, c: '#c9903a', b: true },
+        { t: 'rect', x: 300, y: 124, w: 52, h: 22, c: '#37312a', b: true },
+        { t: 'text', x: 326, y: 129, s: 'DNES', c: '#e2d3ae', size: 7, align: 'center' },
+        { t: 'text', x: 326, y: 138, s: 'VIŠŇOVÝ', c: '#e0343a', size: 6, align: 'center' },
+        { t: 'rect', x: 366, y: 128, w: 44, h: 18, c: '#4a5257', b: true },
+        { t: 'text', x: 388, y: 133, s: 'CENY', c: '#c9b26a', size: 7, align: 'center' },
+        { t: 'rect', x: 118, y: 186, w: 48, h: 52, c: '#464e53', b: true },
+        { t: 'rect', x: 124, y: 192, w: 36, h: 16, c: '#22262a', b: 'down' },
+        { t: 'rect', x: 128, y: 196, w: 8, h: 8, c: '#8d9aa0' },
+        { t: 'rect', x: 126, y: 212, w: 22, h: 24, c: '#1d1713', b: true },
+        { t: 'rect', x: 128, y: 220, w: 18, h: 14, c: '#46201a' },
+        { t: 'rect', x: 148, y: 214, w: 6, h: 12, c: '#8a2a2a' },
+        { t: 'ell', x: 136, y: 184, rx: 7, ry: 4, c: 'rgba(230,230,220,0.18)' },
+
+        /* --- vitrína s koláči --- */
+        { t: 'rect', x: 320, y: 186, w: 78, h: 52, c: '#6d716c' },
+        { t: 'rect', x: 324, y: 190, w: 70, h: 44, c: '#9aa2a6', alpha: 0.45 },
+        { t: 'rect', x: 324, y: 226, w: 70, h: 8, c: '#c9903a', b: true },
+        { t: 'poly', pts: [[332, 226], [350, 202], [368, 226]], c: '#a81c22' },
+        { t: 'poly', pts: [[332, 226], [341, 214], [350, 226]], c: '#c2262c' },
+        { t: 'poly', pts: [[354, 226], [370, 206], [386, 226]], c: '#7e1218' },
+        { t: 'rect', x: 320, y: 186, w: 78, h: 4, c: '#8f959a', b: true },
+        { t: 'line', x1: 330, y1: 192, x2: 338, y2: 222, c: 'rgba(255,255,255,0.25)', w: 3 },
+
+        /* --- pult --- */
+        { t: 'wood', x: 0, y: 234, w: 528, h: 18, c: '#8a6e4c', plank: 18, z: 272 },
+        { t: 'rect', x: 0, y: 232, w: 528, h: 4, c: '#c6cbc9', b: true, z: 272 },
+        { t: 'rect', x: 0, y: 252, w: 528, h: 20, c: '#63402f', z: 272 },
+        { t: 'stripes', x: 0, y: 252, w: 528, h: 20, c: 'rgba(0,0,0,0.22)', gap: 26, thick: 2, z: 272 },
+        { t: 'rect', x: 0, y: 250, w: 528, h: 3, c: '#a9a29a', z: 272 },
+        { t: 'rect', x: 0, y: 268, w: 528, h: 5, c: '#37281f', z: 272 },
+        /* drobnosti na pultu */
+        { t: 'rect', x: 286, y: 222, w: 14, h: 12, c: '#c6cbc9', b: true, z: 273 },
+        { t: 'rect', x: 306, y: 224, w: 8, h: 10, c: '#a81c22', b: true, z: 273 },
+        { t: 'rect', x: 316, y: 224, w: 8, h: 10, c: '#c9b26a', b: true, z: 273 },
+        { t: 'rect', x: 404, y: 224, w: 12, h: 12, c: '#c6cbc9', b: true, z: 273 },
+        { t: 'rect', x: 478, y: 220, w: 18, h: 16, c: '#8a7053', b: true, z: 273 },
+        { t: 'rect', x: 480, y: 216, w: 14, h: 6, c: '#e2d3ae', z: 273 },
+
+        /* --- barové stoličky --- */
+        { t: 'rect', x: 292, y: 282, w: 9, h: 26, c: '#3f4750', b: true, z: 281 },
+        { t: 'ell', x: 296, y: 282, rx: 16, ry: 6, c: '#8c4a52', z: 281 },
+        { t: 'ell', x: 296, y: 280, rx: 14, ry: 4, c: '#a05a60', z: 281 },
+        { t: 'rect', x: 348, y: 282, w: 9, h: 26, c: '#3f4750', b: true, z: 281 },
+        { t: 'ell', x: 352, y: 282, rx: 16, ry: 6, c: '#8c4a52', z: 281 },
+        { t: 'ell', x: 352, y: 280, rx: 14, ry: 4, c: '#a05a60', z: 281 },
+        { t: 'rect', x: 404, y: 282, w: 9, h: 26, c: '#3f4750', b: true, z: 281 },
+        { t: 'ell', x: 408, y: 282, rx: 16, ry: 6, c: '#8c4a52', z: 281 },
+        { t: 'ell', x: 408, y: 280, rx: 14, ry: 4, c: '#a05a60', z: 281 },
+
+        /* --- dveře ven --- */
+        { t: 'rect', x: 556, y: 126, w: 76, h: 148, c: '#5a4636', b: true },
+        { t: 'rect', x: 562, y: 134, w: 64, h: 78, c: '#8d9aa0' },
+        { t: 'grad', x: 562, y: 134, w: 64, h: 78, c1: '#b9c2bc', c2: '#7e8b90' },
+        { t: 'trees', x: 562, y: 168, w: 64, h: 44, c: '#22362a', c2: '#1a2a20', n: 4, tw: 22 },
+        { t: 'rect', x: 562, y: 216, w: 64, h: 50, c: '#46372a', b: true },
+        { t: 'ell', x: 570, y: 206, rx: 4, ry: 4, c: '#e8c46a' },
+        { t: 'rect', x: 576, y: 140, w: 36, h: 16, c: '#1b1614', alpha: 0.5 },
+        { t: 'text', x: 594, y: 143, s: 'OTEVŘENO', c: '#e0343a', size: 6, align: 'center' },
+
+        /* --- podlaha --- */
+        { t: 'checker', x: 0, y: 272, w: 640, h: 44, c1: '#c8cbc6', c2: '#2a231d', size: 16 },
+        { t: 'checker', x: 528, y: 236, w: 112, h: 80, c1: '#c8cbc6', c2: '#2a231d', size: 16 },
+        { t: 'grad', x: 0, y: 272, w: 640, h: 16, c1: 'rgba(20,12,8,0.45)', c2: 'rgba(20,12,8,0)' },
+
+        /* --- věci k sebrání --- */
+        { t: 'rect', x: 444, y: 224, w: 28, h: 12, c: '#464e53', b: true, if: { not: 'diktafonVzat' }, z: 273 },
+        { t: 'rect', x: 450, y: 227, w: 10, h: 6, c: '#8d9aa0', if: { not: 'diktafonVzat' }, z: 273 },
+        { t: 'rect', x: 416, y: 226, w: 15, h: 11, c: '#d9dcdb', b: true, if: { all: ['cooperOdesel', { not: 'hrnekVzat' }] }, z: 273 },
+        { t: 'rect', x: 244, y: 226, w: 30, h: 10, c: '#a08f76', b: true, if: { not: 'zapisnikVzat' }, z: 273 },
+        { t: 'rect', x: 178, y: 220, w: 20, h: 16, c: '#e8dcc0', b: true, if: { not: 'moukaVzat' }, z: 273 },
+        { t: 'rect', x: 178, y: 220, w: 20, h: 4, c: '#c3b493', if: { not: 'moukaVzat' }, z: 273 },
+
+        /* --- popředí: box s lavicí a lampa (rám záběru) --- */
+        { t: 'rect', x: 0, y: 150, w: 52, h: 166, c: '#241512', fg: true },
+        { t: 'rect', x: 0, y: 150, w: 52, h: 10, c: '#31201a', fg: true },
+        { t: 'rect', x: 0, y: 238, w: 52, h: 12, c: '#3a2620', fg: true },
+        { t: 'stripes', x: 0, y: 160, w: 52, h: 78, c: 'rgba(0,0,0,0.35)', gap: 18, thick: 4, fg: true },
+        { t: 'poly', pts: [[52, 150], [62, 178], [62, 316], [52, 316]], c: '#1d110f', fg: true },
+        { t: 'rect', x: 138, y: 0, w: 6, h: 34, c: '#1d1713', fg: true },
+        { t: 'poly', pts: [[118, 34], [164, 34], [176, 58], [106, 58]], c: '#2c2119', fg: true },
+        { t: 'poly', pts: [[106, 58], [176, 58], [172, 62], [110, 62]], c: '#e8c46a', fg: true },
+            ],
+      onEnter: [
+        { if: { not: 'intro' }, then: [
+          { wait: 500 },
+          { dialog: 'uvod' },
+          { actor: 'cooper', to: [612, 292] },
+          { wait: 2100 },
+          { flag: 'cooperOdesel' },
+          { say: 'Tak jo. Diktafon, štítek, pokoj 315. Začnu tím, co mám na dosah.' },
+        ] },
+      ],
+      hotspots: [
+        { id: 'norma', actor: 'norma', x: 200, y: 250, facing: 1, walkTo: [206, 286], face: 'left',
+          talk: [{ dialog: 'norma' }],
+          look: [{ say: 'Norma. Drží tenhle podnik pohromadě silou vůle a višněmi.' }] },
+        { id: 'cooper', actor: 'cooper', x: 470, y: 282, facing: -1, if: { not: 'cooperOdesel' },
+          walkTo: [430, 292], face: 'right',
+          talk: [{ dialog: 'cooper_diner' }],
+          look: [{ say: 'Agent Cooper. Poslouchá kávu, jako by mu měla něco říct.' }] },
+        { id: 'hostA', actor: 'hostA', x: 296, y: 294, facing: 1, sitting: true, walkTo: [296, 304],
+          look: [{ say: 'Řidič náklaďáku. Na rukávu má dvě různé vrstvy bláta.' }],
+          talk: [{ say: 'Zeptám se, jestli si dá ještě.' }, { by: 'hostA', say: '…' }],
+          useWith: { konvice: P.nalij('hostA') } },
+        { id: 'hostB', actor: 'hostB', x: 352, y: 294, facing: 1, sitting: true, walkTo: [352, 304],
+          look: [{ say: 'Paní v klobouku. Sedí tu podle Normy každé ráno od roku, který nechce říct.' }],
+          talk: [{ by: 'hostB', say: 'Až tu budeš dost dlouho, holka, poznáš lidi podle toho, jak drží hrnek.' }],
+          useWith: { konvice: P.nalij('hostB') } },
+        { id: 'hostC', actor: 'hostC', x: 408, y: 294, facing: 1, sitting: true, walkTo: [408, 304],
+          look: [{ say: 'Pán s novinami. Čte dnešní vydání, ale stránka se nemění.' }],
+          talk: [{ by: 'hostC', say: 'Hmm.' }, { say: 'To byla celá konverzace a ještě si ji budu pamatovat.' }],
+          useWith: { konvice: P.nalij('hostC') } },
+
+        { id: 'diktafon', name: 'diktafon', x: 438, y: 216, w: 40, h: 24, walkTo: [438, 292], if: { not: 'diktafonVzat' },
+          verb: 'take',
+          look: [{ say: 'Cooperův diktafon. Stejný model, stejné oděrky na boku.' },
+                 { say: 'Jenže Cooperův to není. Tenhle má na spodku štítek: 315 — Great Northern.' },
+                 { flag: 'videlaStitek' }],
+          use: [{ say: 'Vezmu ho. Jestli je to důkaz, tak ať je aspoň u mě.' },
+                { get: 'diktafon', silent: true }, { flag: 'videlaStitek' }, { quiet: 'diktafonVzat' },
+                { say: 'Pod palcem cítím štítek. 315.' }] },
+        { id: 'hrnek', name: 'Cooperův hrnek', x: 410, y: 218, w: 26, h: 22, walkTo: [412, 292],
+          if: { all: ['cooperOdesel', { not: 'hrnekVzat' }] }, verb: 'take',
+          look: [{ say: 'Cooperův hrnek. Nedopitý. Odešel uprostřed věty.' }],
+          use: [{ get: 'hrnek' }, { quiet: 'hrnekVzat' }] },
+        { id: 'zapisnik', name: 'Normin zápisník', x: 238, y: 220, w: 40, h: 20, walkTo: [246, 290],
+          if: { not: 'zapisnikVzat' }, verb: 'take',
+          look: [{ say: 'Normin zápisník objednávek. Píše do něj všechno. Opravdu všechno.' }],
+          use: [{ say: 'Vezmu si zápisník. Vrátím ho dřív, než si všimne.' },
+                { get: 'zapisnik', silent: true },
+                { say: '„Stůl 2: dva koláče, káva. Platil kanadskými. Jerry H.“' },
+                { quiet: 'zapisnikVzat' },
+                { flag: 'jerryZmineny' },
+                { say: 'Jerry Horne. Seděl přesně tam, kde ležel Cooperův diktafon.' }] },
+        { id: 'mouka', name: 'hrnek mouky', x: 176, y: 216, w: 26, h: 24, walkTo: [182, 290],
+          if: { not: 'moukaVzat' }, verb: 'take',
+          look: [{ say: 'Hrnek mouky na koláčové těsto. Jemná jako prach.' }],
+          use: [{ get: 'mouka' }, { quiet: 'moukaVzat' }] },
+        { id: 'vitrina', name: 'vitrína s koláči', x: 324, y: 190, w: 72, h: 48, walkTo: [340, 292],
+          look: [{ say: 'Višňové koláče. Norma říká, že višně letos vyšly dobře. Z toho, jak to řekla, jsem pochopila, že o višních nemluvila.' }],
+          use: [{ if: { any: [{ has: 'kolac' }, 'kolacVzat'] }, then: [{ say: 'Jeden koláč s sebou mi stačí. Víc by Norma poznala.' }], else: [
+            { by: 'norma', say: 'Vem si jeden s sebou. Kdo běhá po městě, má mít v tašce koláč.' },
+            { get: 'kolac' },
+            { quiet: 'kolacVzat' },
+          ] }] },
+        { id: 'konvice', name: 'konvice s kávou', x: 118, y: 188, w: 50, h: 52, walkTo: [132, 290],
+          look: [{ say: 'Kávovar. Norma ho čistí častěji než šerif svou zbraň.' }],
+          use: [{ if: { has: 'konvice' }, then: [{ say: 'Konvici mám. Teď hrnky.' }, { drop: 'konvice' }, { say: 'Vrátím ji na plotnu, ať nevychladne.' }],
+                 else: [{ get: 'konvice' }] }] },
+        { id: 'lednice', name: 'lednička', x: 56, y: 150, w: 62, h: 88, walkTo: [124, 292],
+          look: [{ say: 'Na ledničce visí dětská kresba. Dole velkými písmeny podpis: MAX.' },
+                 { say: 'Je na ní pes. Docela dobrý pes na to, že vznikl pastelkou a bez modelu.' },
+                 { say: 'Tohle kreslil Max. Podpis má skoro větší než toho psa — a dobře dělá.' }] },
+        { id: 'okno', name: 'okno', x: 26, y: 32, w: 186, h: 112, walkTo: [116, 290],
+          look: [{ say: 'Za oknem mlha a jedle. Mlha se hýbe pomaleji, než by měla.' }] },
+        { id: 'neon', name: 'cedule', x: 452, y: 36, w: 166, h: 54, walkTo: [470, 292],
+          look: [{ say: '„DOUBLE R DINER“. Zevnitř jde číst pozpátku. To se mi dnes ještě bude hodit.' }] },
+        { id: 'dvere', name: 'ven do města', x: 560, y: 132, w: 68, h: 140, exit: 'mapa',
+          walkTo: [574, 296],
+          blockedIf: { not: 'kavaHotova' },
+          blocked: [{ by: 'norma', say: 'Natálie! Než někam půjdeš, obsluž pult. Tři hrnky, tři hosté.' },
+                    { say: 'Konvice je na kávovaru. Dobře — tři kávy a jdu.' }] },
+      ],
+    },
+
+    /* ================================ MAPA ================================ */
+    mapa: {
+      id: 'mapa', name: 'Twin Peaks', bg: 'bg_mapa', music: 'town', noWalk: true, highlightHover: true,
+      atmo: { lights: [[320, 150, 300, '255,226,170', 0.16]], wash: 'rgba(60,40,14,0.08)', vignette: 0.40 },
+      art: [
+        { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#241c15' },
+        { t: 'rect', x: 22, y: 12, w: 596, h: 292, c: '#8a7053' },
+        { t: 'rect', x: 26, y: 16, w: 588, h: 284, c: '#d8cba8' },
+        { t: 'rect', x: 32, y: 22, w: 576, h: 272, c: '#cfc09a' },
+        { t: 'text', x: 320, y: 28, s: 'TWIN PEAKS', c: '#6b4a3a', size: 15, bold: true, align: 'center' },
+        { t: 'text', x: 320, y: 46, s: '48 201 obyvatel', c: '#8a7053', size: 8, align: 'center' },
+        { t: 'poly', pts: [[244, 132], [300, 62], [356, 132]], c: '#9aa88c' },
+        { t: 'poly', pts: [[300, 132], [360, 54], [420, 132]], c: '#87977a' },
+        { t: 'poly', pts: [[286, 82], [300, 62], [314, 82]], c: '#e4ddc8' },
+        { t: 'poly', pts: [[346, 74], [360, 54], [374, 74]], c: '#e4ddc8' },
+        { t: 'text', x: 332, y: 136, s: 'Twin Peaks', c: '#6f7f63', size: 8, align: 'center' },
+        { t: 'line', x1: 34, y1: 196, x2: 240, y2: 178, c: '#7d9ab0', w: 4 },
+        { t: 'line', x1: 240, y1: 178, x2: 430, y2: 186, c: '#7d9ab0', w: 4 },
+        { t: 'line', x1: 430, y1: 186, x2: 606, y2: 168, c: '#7d9ab0', w: 4 },
+        { t: 'trees', x: 36, y: 232, w: 560, h: 40, c: '#5f7a52', c2: '#4e6a45', n: 20, tw: 20 },
+        { t: 'trees', x: 440, y: 226, w: 160, h: 34, c: '#5f7a52', c2: '#4e6a45', n: 7, tw: 18 },
+        { t: 'trees', x: 36, y: 92, w: 120, h: 36, c: '#5f7a52', c2: '#4e6a45', n: 5, tw: 20 },
+        { t: 'trees', x: 470, y: 58, w: 130, h: 36, c: '#5f7a52', c2: '#4e6a45', n: 5, tw: 20 },
+        { t: 'line', x1: 135, y1: 77, x2: 145, y2: 165, c: '#a89272', w: 3 },
+        { t: 'line', x1: 145, y1: 165, x2: 500, y2: 133, c: '#a89272', w: 3 },
+        { t: 'line', x1: 500, y1: 133, x2: 510, y2: 211, c: '#a89272', w: 3 },
+        { t: 'line', x1: 145, y1: 165, x2: 195, y2: 247, c: '#a89272', w: 3 },
+        { t: 'rect', x: 70, y: 150, w: 150, h: 30, c: '#e4dcc0', o: '#8a7053' },
+        { t: 'rect', x: 79, y: 160, w: 10, h: 10, c: '#a81c22' },
+        { t: 'text', x: 96, y: 161, s: 'Double R Diner', c: '#3b2e24', size: 9 },
+        { t: 'rect', x: 60, y: 62, w: 150, h: 30, c: '#e4dcc0', o: '#8a7053' },
+        { t: 'rect', x: 69, y: 72, w: 10, h: 10, c: '#a81c22' },
+        { t: 'text', x: 86, y: 73, s: 'Great Northern', c: '#3b2e24', size: 9 },
+        { t: 'rect', x: 420, y: 118, w: 150, h: 30, c: '#e4dcc0', o: '#8a7053' },
+        { t: 'rect', x: 429, y: 128, w: 10, h: 10, c: '#a81c22' },
+        { t: 'text', x: 446, y: 129, s: 'šerifova stanice', c: '#3b2e24', size: 9 },
+        { t: 'rect', x: 430, y: 196, w: 150, h: 30, c: '#e4dcc0', o: '#8a7053', if: { has: 'mapa' } },
+        { t: 'rect', x: 439, y: 206, w: 10, h: 10, c: '#a81c22', if: { has: 'mapa' } },
+        { t: 'text', x: 456, y: 207, s: 'chatka Log Lady', c: '#3b2e24', size: 9, if: { has: 'mapa' } },
+        { t: 'rect', x: 120, y: 232, w: 150, h: 30, c: '#e4dcc0', o: '#8a7053', if: 'polinkoPromluvilo' },
+        { t: 'rect', x: 129, y: 242, w: 10, h: 10, c: '#a81c22', if: 'polinkoPromluvilo' },
+        { t: 'text', x: 146, y: 243, s: 'Ghostwood', c: '#3b2e24', size: 9, if: 'polinkoPromluvilo' },
+        { t: 'rect', x: 32, y: 276, w: 576, h: 18, c: '#cfc09a' },
+        { t: 'text', x: 320, y: 280, s: 'klikni na místo, kam chceš jít', c: '#8a7053', size: 8, align: 'center' },
+
+        /* --- stárnutí papíru --- */
+        { t: 'ell', x: 520, y: 70, rx: 26, ry: 18, c: 'rgba(120,80,30,0.10)' },
+        { t: 'ell', x: 520, y: 70, rx: 21, ry: 14, c: 'rgba(200,170,120,0.10)' },
+        { t: 'ell', x: 120, y: 250, rx: 34, ry: 20, c: 'rgba(120,80,30,0.08)' },
+        { t: 'line', x1: 320, y1: 16, x2: 320, y2: 300, c: 'rgba(255,250,235,0.16)', w: 1 },
+        { t: 'line', x1: 322, y1: 16, x2: 322, y2: 300, c: 'rgba(90,60,20,0.10)', w: 1 },
+        { t: 'line', x1: 26, y1: 158, x2: 614, y2: 158, c: 'rgba(255,250,235,0.12)', w: 1 },
+      ],
+      hotspots: [
+        { id: 'go_diner', name: 'Double R Diner', x: 70, y: 150, w: 150, h: 30, exit: 'diner', exitAt: [330, 292],
+          look: [{ say: 'Káva, koláč a Norma, která vidí všechno.' }] },
+        { id: 'go_hotel', name: 'Great Northern', x: 60, y: 62, w: 150, h: 30, exit: 'hotel',
+          look: [{ say: 'Hotel Bena Hornea. A pokoj 315.' }] },
+        { id: 'go_stanice', name: 'šerifova stanice', x: 420, y: 118, w: 150, h: 30, exit: 'stanice',
+          look: [{ say: 'Prý tam mají nejlepší koblihy v okrese.' }] },
+        { id: 'go_chatka', name: 'chatka Log Lady', x: 430, y: 196, w: 150, h: 30, exit: 'chatka',
+          if: { has: 'mapa' },
+          look: [{ say: 'Hawk napsal: nejdřív Log Lady.' }] },
+        { id: 'go_les', name: 'Ghostwood', x: 120, y: 232, w: 150, h: 30, exit: 'les',
+          if: 'polinkoPromluvilo',
+          look: [{ say: 'Starý pařez, o kterém mluvilo polínko.' }] },
+      ],
+    },
+  };
+})();
+
+/* ===================== GREAT NORTHERN + CHODBA + 315 ===================== */
+(function () {
+  const TP = window.TP;
+  const WOOD = '#5a4636', WOOD_D = '#3b2e24';
+
+  Object.assign(TP.data.rooms, {
+    hotel: {
+      id: 'hotel', name: 'Great Northern — hala', bg: 'bg_hotel', music: 'town',
+      start: [200, 296], walk: [[30, 276], [618, 276], [618, 308], [26, 308]],
+      scale: [276, 0.9, 308, 1.06],
+      atmo: {
+        lights: [[142, 202, 130, '255,150,60', 0.30], [520, 96, 160, '255,214,150', 0.20], [300, 40, 200, '255,206,140', 0.10]],
+        wash: 'rgba(66,32,8,0.12)', vignette: 0.50,
+      },
+      art: [
+        { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#2b221a' },
+        { t: 'wood', x: 0, y: 0, w: 640, h: 276, c: '#6b5540', plank: 34, vertical: true },
+        { t: 'grad', x: 0, y: 0, w: 640, h: 276, c1: 'rgba(0,0,0,0.30)', c2: 'rgba(0,0,0,0)' },
+        { t: 'rect', x: 0, y: 30, w: 640, h: 8, c: WOOD_D },
+        /* krb */
+        { t: 'rect', x: 84, y: 150, w: 120, h: 98, c: '#5c5449' },
+        { t: 'rect', x: 96, y: 176, w: 96, h: 60, c: '#120d09' },
+        { t: 'rect', x: 96, y: 176, w: 96, h: 6, c: '#0a0705' },
+        { t: 'poly', pts: [[120, 236], [136, 196], [152, 236]], c: '#c9532a' },
+        { t: 'poly', pts: [[140, 236], [152, 204], [166, 236]], c: '#f0c060' },
+        { t: 'rect', x: 78, y: 142, w: 132, h: 10, c: WOOD },
+        /* parohy */
+        { t: 'rect', x: 118, y: 96, w: 44, h: 34, c: '#6b4a2f' },
+        { t: 'line', x1: 122, y1: 96, x2: 104, y2: 66, c: '#c8b48a', w: 3 },
+        { t: 'line', x1: 158, y1: 96, x2: 176, y2: 66, c: '#c8b48a', w: 3 },
+        { t: 'line', x1: 110, y1: 78, x2: 96, y2: 74, c: '#c8b48a', w: 2 },
+        { t: 'line', x1: 170, y1: 78, x2: 184, y2: 74, c: '#c8b48a', w: 2 },
+        /* plakát konference */
+        { t: 'rect', x: 228, y: 112, w: 70, h: 56, c: '#e4ddc8' },
+        { t: 'rect', x: 228, y: 112, w: 70, h: 12, c: '#2f5d3a' },
+        { t: 'text', x: 263, y: 114, s: 'DRS', c: '#e4ddc8', size: 8, bold: true, align: 'center' },
+        { t: 'text', x: 263, y: 130, s: 'Design', c: '#3b2e24', size: 7, align: 'center' },
+        { t: 'text', x: 263, y: 140, s: 'Research', c: '#3b2e24', size: 7, align: 'center' },
+        { t: 'text', x: 263, y: 150, s: 'Society', c: '#3b2e24', size: 7, align: 'center' },
+        { t: 'text', x: 263, y: 158, s: 'Skotsko', c: '#7a6a58', size: 6, align: 'center' },
+        /* chodba */
+        { t: 'rect', x: 322, y: 118, w: 104, h: 158, c: WOOD_D },
+        { t: 'rect', x: 330, y: 126, w: 88, h: 150, c: '#1d1712' },
+        { t: 'poly', pts: [[330, 276], [418, 276], [400, 186], [348, 186]], c: '#3a2a22' },
+        { t: 'text', x: 374, y: 132, s: 'POKOJE', c: '#c9903a', size: 8, align: 'center' },
+        /* tabule s klíči */
+        { t: 'rect', x: 466, y: 82, w: 136, h: 70, c: WOOD_D },
+        { t: 'rect', x: 472, y: 88, w: 124, h: 58, c: '#2f251d' },
+        { t: 'stripes', x: 476, y: 92, w: 116, h: 50, c: '#c9903a', gap: 14, thick: 2 },
+        { t: 'stripes', x: 476, y: 92, w: 116, h: 50, c: 'rgba(240,192,96,0.35)', gap: 16, thick: 8, vertical: false },
+        { t: 'rect', x: 556, y: 126, w: 18, h: 12, c: '#f0c060', if: { not: 'kartaZiskana' } },
+        /* recepce */
+        { t: 'rect', x: 430, y: 236, w: 200, h: 16, c: '#7a5a3a', z: 278 },
+        { t: 'rect', x: 430, y: 252, w: 200, h: 24, c: '#4f3b28', z: 278 },
+        { t: 'rect', x: 444, y: 226, w: 22, h: 12, c: '#2a2f33', z: 279 },
+        { t: 'ell', x: 486, y: 232, rx: 7, ry: 5, c: '#c9903a', z: 279 },
+        /* dveře ven */
+        { t: 'rect', x: 8, y: 138, w: 58, h: 138, c: WOOD },
+        { t: 'rect', x: 14, y: 146, w: 46, h: 62, c: '#9aa7ab' },
+        { t: 'rect', x: 14, y: 212, w: 46, h: 56, c: WOOD_D },
+        /* podlaha */
+        { t: 'rect', x: 0, y: 270, w: 640, h: 8, c: '#2a2019' },
+        { t: 'rect', x: 0, y: 278, w: 640, h: 38, c: '#6a4f33' },
+        { t: 'stripes', x: 0, y: 278, w: 640, h: 38, c: 'rgba(0,0,0,0.22)', gap: 30, thick: 3 },
+        { t: 'rect', x: 120, y: 284, w: 270, h: 30, c: '#6b3a3a' },
+        { t: 'rect', x: 126, y: 288, w: 258, h: 22, c: '#8c4a52' },
+        { t: 'stripes', x: 126, y: 288, w: 258, h: 22, c: 'rgba(0,0,0,0.12)', gap: 18, thick: 2 },
+
+        /* --- detaily haly --- */
+        { t: 'rect', x: 214, y: 224, w: 38, h: 26, c: '#4a3524', b: true },
+        { t: 'ell', x: 222, y: 224, rx: 5, ry: 4, c: '#7a5a3a' },
+        { t: 'ell', x: 234, y: 224, rx: 5, ry: 4, c: '#6b4a2f' },
+        { t: 'ell', x: 246, y: 224, rx: 5, ry: 4, c: '#7a5a3a' },
+        { t: 'rect', x: 226, y: 56, w: 70, h: 48, c: '#3b2e24', b: true },
+        { t: 'rect', x: 231, y: 61, w: 60, h: 38, c: '#7d8f84' },
+        { t: 'trees', x: 231, y: 76, w: 60, h: 23, c: '#22362a', c2: '#1a2a20', n: 4, tw: 18 },
+        { t: 'rect', x: 306, y: 246, w: 14, h: 30, c: '#3b2e24', b: true },
+        { t: 'rect', x: 300, y: 224, w: 26, h: 22, c: '#c9903a', b: true },
+        { t: 'ell', x: 313, y: 232, rx: 16, ry: 12, c: 'rgba(255,206,140,0.22)' },
+        { t: 'rect', x: 596, y: 214, w: 14, h: 22, c: '#3b2e24', b: true, z: 279 },
+        { t: 'rect', x: 592, y: 200, w: 22, h: 16, c: '#c9903a', b: true, z: 279 },
+        { t: 'rect', x: 452, y: 224, w: 26, h: 12, c: '#d8cba8', b: true, z: 279 },
+        /* --- popředí: stropní trám, lustr a kapradina v rohu --- */
+        { t: 'rect', x: 0, y: 0, w: 640, h: 22, c: '#241a12', fg: true },
+        { t: 'rect', x: 0, y: 22, w: 640, h: 5, c: '#33261b', fg: true },
+        { t: 'rect', x: 318, y: 22, w: 5, h: 26, c: '#1d1712', fg: true },
+        { t: 'poly', pts: [[300, 48], [342, 48], [352, 70], [290, 70]], c: '#2c2119', fg: true },
+        { t: 'poly', pts: [[290, 70], [352, 70], [348, 74], [294, 74]], c: '#e8c46a', fg: true },
+        { t: 'poly', pts: [[0, 238], [30, 250], [42, 292], [0, 316]], c: '#1a1410', fg: true },
+        { t: 'poly', pts: [[6, 244], [40, 226], [34, 268]], c: '#1f2a1c', fg: true },
+        { t: 'poly', pts: [[0, 252], [26, 230], [30, 276]], c: '#182317', fg: true },
+      ],
+      hotspots: [
+        { id: 'ben', actor: 'ben', x: 520, y: 252, facing: -1, walkTo: [486, 292], face: 'right',
+          talk: [{ dialog: 'ben' }],
+          look: [{ say: 'Ben Horne. Usmívá se, jako by mi právě něco prodal, a já ještě nevím co.' }] },
+        { id: 'tabule', name: 'tabule s klíči', x: 466, y: 82, w: 136, h: 70, walkTo: [520, 292],
+          look: [{ say: 'Tabule s klíči. V přihrádce 315 visí univerzální karta — ta, co otevře všechno.' }],
+          use: [
+            { if: 'kartaZiskana', then: [{ say: 'Kartu už mám. Víc štěstí na jednu tabuli nechci.' }], else: [
+              { if: 'benRozpovidan', then: [
+                { say: 'Ben se dívá do Kanady. Natáhnu se přes pult…' },
+                { sfx: 'take' },
+                { get: 'karta', silent: true },
+                { say: 'Mám ji. Tohle by Norma ráda neviděla.' },
+                { flag: 'kartaZiskana' },
+              ], else: [
+                { say: 'Ben stojí přímo u tabule a kouká na mě. Musím ho něčím zaměstnat.' },
+                { say: 'Nejlíp něčím, o čem mluví rád.' },
+              ] },
+            ] },
+          ] },
+        { id: 'plakat', name: 'plakát', x: 228, y: 112, w: 70, h: 56, walkTo: [262, 292],
+          look: [
+            { say: '„Design Research Society — konference, Skotsko. Účastníci: přežili.“' },
+            { by: 'ben', say: 'Ne, nejel jsem. Slyšel jsem, že to bylo hrozné.' },
+            { say: 'Bylo to hrozné.' },
+          ] },
+        { id: 'krb', name: 'krb', x: 84, y: 142, w: 126, h: 106, walkTo: [140, 296],
+          look: [{ say: 'V krbu hoří. Teplo sem nedosáhne, ale to asi není úkol ohně v hotelu.' }] },
+        { id: 'parohy', name: 'parohy', x: 96, y: 62, w: 92, h: 70, walkTo: [140, 296],
+          look: [{ say: 'Los. Dívá se přesně na recepci. Za ta léta musel slyšet všechno.' }] },
+        { id: 'recepce', name: 'recepce', x: 430, y: 226, w: 200, h: 50, walkTo: [452, 294],
+          look: [{ say: 'Kniha hostů, zvonek a popelník. Zvonek je vyleštěný, kniha ne.' }] },
+        { id: 'chodba', name: 'chodba k pokojům', x: 322, y: 118, w: 104, h: 158, exit: 'chodba',
+          walkTo: [374, 290], exitAt: [110, 292] },
+        { id: 'ven', name: 'ven do města', x: 8, y: 138, w: 58, h: 138, exit: 'mapa', walkTo: [80, 296] },
+      ],
+    },
+
+    chodba: {
+      id: 'chodba', name: 'Great Northern — chodba', bg: 'bg_chodba', music: 'town',
+      start: [110, 292], walk: [[44, 278], [596, 278], [596, 308], [40, 308]],
+      scale: [278, 0.88, 308, 1.04],
+      atmo: {
+        lights: [[120, 70, 130, '255,206,140', 0.30], [360, 70, 130, '255,206,140', 0.30], [560, 70, 130, '255,206,140', 0.26]],
+        wash: 'rgba(60,28,10,0.14)', vignette: 0.52,
+      },
+      art: [
+        { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#241c15' },
+        { t: 'wood', x: 0, y: 0, w: 640, h: 278, c: '#5e4b38', plank: 30, vertical: true },
+        { t: 'grad', x: 0, y: 0, w: 640, h: 278, c1: 'rgba(0,0,0,0.34)', c2: 'rgba(0,0,0,0.05)' },
+        { t: 'rect', x: 0, y: 40, w: 640, h: 6, c: WOOD_D },
+        { t: 'rect', x: 0, y: 198, w: 640, h: 10, c: WOOD_D },
+        /* lampy */
+        { t: 'ell', x: 120, y: 70, rx: 16, ry: 10, c: '#f0c060', alpha: 0.85 },
+        { t: 'ell', x: 360, y: 70, rx: 16, ry: 10, c: '#f0c060', alpha: 0.85 },
+        { t: 'ell', x: 560, y: 70, rx: 16, ry: 10, c: '#f0c060', alpha: 0.85 },
+        { t: 'grad', x: 60, y: 70, w: 120, h: 208, c1: 'rgba(240,192,96,0.12)', c2: 'rgba(240,192,96,0)' },
+        { t: 'grad', x: 300, y: 70, w: 120, h: 208, c1: 'rgba(240,192,96,0.12)', c2: 'rgba(240,192,96,0)' },
+        /* dveře 311 / 313 */
+        { t: 'rect', x: 70, y: 124, w: 62, h: 154, c: WOOD },
+        { t: 'rect', x: 76, y: 130, w: 50, h: 142, c: '#4b3a2a' },
+        { t: 'text', x: 101, y: 142, s: '311', c: '#c9b26a', size: 9, align: 'center' },
+        { t: 'rect', x: 250, y: 124, w: 62, h: 154, c: WOOD },
+        { t: 'rect', x: 256, y: 130, w: 50, h: 142, c: '#4b3a2a' },
+        { t: 'text', x: 281, y: 142, s: '313', c: '#c9b26a', size: 9, align: 'center' },
+        /* dveře 315 */
+        { t: 'rect', x: 456, y: 120, w: 76, h: 158, c: WOOD },
+        { t: 'rect', x: 462, y: 126, w: 64, h: 146, c: '#4b3a2a' },
+        { t: 'text', x: 494, y: 138, s: '315', c: '#f0c060', size: 11, bold: true, align: 'center' },
+        { t: 'ell', x: 516, y: 206, rx: 4, ry: 4, c: '#c9903a' },
+        { t: 'rect', x: 462, y: 196, w: 18, h: 10, c: '#2f5d3a' },
+        /* vozík pokojské */
+        { t: 'rect', x: 160, y: 224, w: 78, h: 48, c: '#55606b', if: { not: 'uniformaNaSobe' } },
+        { t: 'rect', x: 160, y: 218, w: 78, h: 8, c: '#3f4750', if: { not: 'uniformaNaSobe' } },
+        { t: 'rect', x: 168, y: 228, w: 26, h: 18, c: '#dfe4e2', if: { not: 'uniformaNaSobe' } },
+        { t: 'rect', x: 200, y: 228, w: 30, h: 18, c: '#8d9aa0', if: { not: 'uniformaNaSobe' } },
+        { t: 'ell', x: 172, y: 272, rx: 5, ry: 5, c: '#1d1712', if: { not: 'uniformaNaSobe' } },
+        { t: 'ell', x: 226, y: 272, rx: 5, ry: 5, c: '#1d1712', if: { not: 'uniformaNaSobe' } },
+        { t: 'rect', x: 160, y: 224, w: 78, h: 48, c: '#45505b', if: 'uniformaNaSobe' },
+        { t: 'rect', x: 160, y: 218, w: 78, h: 8, c: '#38404a', if: 'uniformaNaSobe' },
+        /* zpět do haly */
+        { t: 'poly', pts: [[0, 110], [40, 130], [40, 278], [0, 296]], c: '#191411' },
+        { t: 'text', x: 20, y: 200, s: 'hala', c: '#c9903a', size: 8, align: 'center' },
+        /* koberec */
+        { t: 'rect', x: 0, y: 272, w: 640, h: 8, c: '#2a2019' },
+        { t: 'rect', x: 0, y: 280, w: 640, h: 36, c: '#5f4630' },
+        { t: 'rect', x: 30, y: 284, w: 580, h: 32, c: '#7a2f34' },
+        { t: 'stripes', x: 30, y: 284, w: 580, h: 32, c: 'rgba(0,0,0,0.20)', gap: 22, thick: 3 },
+
+        /* --- detaily chodby --- */
+        { t: 'rect', x: 112, y: 76, w: 18, h: 12, c: '#3b2e24', b: true },
+        { t: 'rect', x: 352, y: 76, w: 18, h: 12, c: '#3b2e24', b: true },
+        { t: 'rect', x: 552, y: 76, w: 18, h: 12, c: '#3b2e24', b: true },
+        { t: 'rect', x: 336, y: 118, w: 60, h: 46, c: '#4a3b2b', b: true },
+        { t: 'rect', x: 341, y: 123, w: 50, h: 36, c: '#8a7053' },
+        { t: 'trees', x: 341, y: 140, w: 50, h: 19, c: '#2c4a30', c2: '#22362a', n: 3, tw: 16 },
+        { t: 'rect', x: 400, y: 206, w: 14, h: 32, c: '#a81c22', b: true },
+        { t: 'rect', x: 402, y: 200, w: 10, h: 8, c: '#4a5257' },
+        { t: 'rect', x: 330, y: 266, w: 34, h: 8, c: '#c6cbc9', b: true },
+        { t: 'ell', x: 340, y: 266, rx: 5, ry: 3, c: '#d9dcdb' },
+        /* --- popředí: rámy chodby --- */
+        { t: 'rect', x: 0, y: 0, w: 640, h: 20, c: '#201811', fg: true },
+        { t: 'poly', pts: [[0, 0], [30, 0], [24, 316], [0, 316]], c: '#1a130e', fg: true },
+        { t: 'poly', pts: [[640, 0], [606, 0], [614, 316], [640, 316]], c: '#1a130e', fg: true },
+      ],
+      hotspots: [
+        { id: 'pokojska', actor: 'pokojska', x: 300, y: 286, facing: 1, walkTo: [270, 300], face: 'right',
+          talk: [{ dialog: 'pokojska' }],
+          look: [{ say: 'Pokojská. Skládá ručníky tak, jak to nikdo jiný neumí — do trojúhelníku, který vypadá výhružně.' }] },
+        { id: 'vozik', name: 'vozík pokojské', x: 158, y: 214, w: 84, h: 60, walkTo: [200, 300],
+          look: [{ if: { not: 'uniformaNaSobe' },
+            then: [{ say: 'Vozík s prádlem. Navrchu složená uniforma a gumové rukavice.' }],
+            else: [{ say: 'Vozík. To podstatné z něj mám na sobě.' }] }],
+          use: [{ if: 'uniformaNaSobe', then: [{ say: 'Víc si toho brát nebudu.' }], else: [
+            { say: 'Vezmu si uniformu a rukavice.' },
+            { get: 'uniforma', silent: true },
+            { say: 'Obléknu si ji. Rukavice navíc znamenají, že po sobě nenechám otisky.' },
+            { flag: 'uniformaNaSobe' },
+          ] }] },
+        { id: 'dvere313', name: 'pokoj 313', x: 250, y: 124, w: 62, h: 154, walkTo: [281, 300],
+          look: [{ say: 'Pokoj 313. Zevnitř je slyšet televize a nikdo tam není. To říkala pokojská, ne já.' }] },
+        { id: 'dvere311', name: 'pokoj 311', x: 70, y: 124, w: 62, h: 154, walkTo: [101, 300],
+          look: [{ say: 'Pokoj 311. Na klice visí cedulka NERUŠIT, vyrobená z účtenky.' }] },
+        { id: 'dvere315', name: 'pokoj 315', x: 456, y: 120, w: 76, h: 158, exit: 'pokoj315',
+          walkTo: [494, 300],
+          look: [{ say: 'Pokoj 315. Číslo, které mi celé ráno leží pod palcem.' }],
+          use: [
+            { if: { not: 'uniformaNaSobe' }, then: [
+              { by: 'pokojska', say: 'Slečno? Hosté mají pokoje na druhé straně. Tenhle je obsazený.' },
+              { say: 'Potřebuju vypadat, jako že sem patřím. Někdo v tomhle hotelu chodí všude a nikdo se ho neptá.' },
+            ], else: [
+              { if: { nohas: 'karta' }, then: [
+                { say: 'Zamčeno. Chce to klíč — nebo něco univerzálnějšího.' },
+              ], else: [
+                { say: 'Karta cvakne. Zámek povolí a nikdo si mě nevšimne.' },
+                { sfx: 'flag' },
+                { go: 'pokoj315' },
+              ] },
+            ] },
+          ] },
+        { id: 'zpet', name: 'zpět do haly', x: 0, y: 110, w: 44, h: 186, exit: 'hotel',
+          walkTo: [60, 300], exitAt: [374, 296] },
+      ],
+    },
+
+    pokoj315: {
+      id: 'pokoj315', name: 'pokoj 315', bg: 'bg_pokoj315', music: 'town',
+      start: [120, 296], walk: [[46, 272], [592, 272], [596, 308], [42, 308]],
+      scale: [272, 0.88, 308, 1.04],
+      atmo: {
+        lights: [[510, 150, 300, '216,228,230', 0.34], [276, 206, 130, '255,196,120', 0.20]],
+        wash: 'rgba(40,30,16,0.05)', vignette: 0.38,
+      },
+      art: [
+        { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#221b15' },
+        { t: 'plaster', x: 0, y: 0, w: 640, h: 272, c: '#7d664a', n: 40 },
+        { t: 'stripes', x: 0, y: 0, w: 640, h: 186, c: 'rgba(255,228,186,0.09)', gap: 13, thick: 4 },
+        { t: 'grad', x: 0, y: 0, w: 640, h: 272, c1: 'rgba(0,0,0,0.26)', c2: 'rgba(0,0,0,0)' },
+        { t: 'rect', x: 0, y: 186, w: 640, h: 8, c: '#3b2e24' },
+        /* okno do mlhy */
+        { t: 'rect', x: 400, y: 52, w: 180, h: 116, c: '#3b2e24' },
+        { t: 'grad', x: 406, y: 58, w: 168, h: 104, c1: '#8d9aa0', c2: '#c3cbc6' },
+        { t: 'trees', x: 406, y: 104, w: 168, h: 58, c: '#1b2f1f', c2: '#14241a', n: 6, tw: 30 },
+        { t: 'rect', x: 488, y: 58, w: 4, h: 104, c: '#3b2e24' },
+        /* postel */
+        { t: 'rect', x: 56, y: 196, w: 190, h: 74, c: '#4f3b28', b: true },
+        { t: 'rect', x: 50, y: 148, w: 28, h: 122, c: '#43321f', b: true },
+        { t: 'rect', x: 62, y: 190, w: 180, h: 28, c: '#8a7c62', b: true },
+        { t: 'rect', x: 62, y: 190, w: 180, h: 7, c: '#c6bfae' },
+        { t: 'stripes', x: 62, y: 197, w: 180, h: 21, c: 'rgba(0,0,0,0.12)', gap: 20, thick: 3 },
+        { t: 'rect', x: 66, y: 180, w: 66, h: 22, c: '#e4ddc8', b: true },
+        { t: 'rect', x: 62, y: 214, w: 180, h: 5, c: 'rgba(0,0,0,0.18)' },
+        /* noční stolek s knihou */
+        { t: 'rect', x: 254, y: 214, w: 56, h: 56, c: '#5a4636' },
+        { t: 'rect', x: 258, y: 232, w: 48, h: 6, c: '#43321f' },
+        { t: 'rect', x: 264, y: 202, w: 34, h: 12, c: '#2f5d3a' },
+        { t: 'rect', x: 264, y: 202, w: 34, h: 3, c: '#c9b26a' },
+        /* psací stůl s účtenkou */
+        { t: 'rect', x: 330, y: 212, w: 120, h: 12, c: '#6b4a3a' },
+        { t: 'rect', x: 336, y: 224, w: 8, h: 46, c: '#4f3b28' },
+        { t: 'rect', x: 436, y: 224, w: 8, h: 46, c: '#4f3b28' },
+        { t: 'rect', x: 356, y: 202, w: 26, h: 10, c: '#d8cba8', if: { not: 'uctenkaNalezena' } },
+        { t: 'ell', x: 420, y: 206, rx: 10, ry: 7, c: '#4a5257' },
+        /* koš */
+        { t: 'poly', pts: [[482, 234], [516, 234], [512, 272], [486, 272]], c: '#55606b', if: { not: 'paskaNalezena' } },
+        { t: 'rect', x: 488, y: 228, w: 14, h: 8, c: '#c9903a', if: { not: 'paskaNalezena' } },
+        { t: 'poly', pts: [[482, 234], [516, 234], [512, 272], [486, 272]], c: '#48525c', if: 'paskaNalezena' },
+        /* dveře */
+        { t: 'rect', x: 0, y: 130, w: 44, h: 146, c: '#5a4636' },
+        { t: 'text', x: 22, y: 190, s: 'ven', c: '#c9903a', size: 8, align: 'center' },
+        /* podlaha */
+        { t: 'rect', x: 0, y: 266, w: 640, h: 8, c: '#2a2019' },
+        { t: 'rect', x: 0, y: 274, w: 640, h: 42, c: '#6a4f33' },
+        { t: 'stripes', x: 0, y: 274, w: 640, h: 42, c: 'rgba(0,0,0,0.20)', gap: 32, thick: 3 },
+        { t: 'rect', x: 120, y: 280, w: 380, h: 30, c: '#6b3a3a' },
+        { t: 'stripes', x: 120, y: 280, w: 380, h: 30, c: 'rgba(0,0,0,0.18)', gap: 20, thick: 3 },
+
+        /* --- detaily pokoje --- */
+        { t: 'rect', x: 386, y: 42, w: 18, h: 136, c: '#6e3a3a', b: true },
+        { t: 'rect', x: 576, y: 42, w: 18, h: 136, c: '#6e3a3a', b: true },
+        { t: 'rect', x: 386, y: 42, w: 208, h: 10, c: '#4a2b2e', b: true },
+        { t: 'rect', x: 262, y: 188, w: 26, h: 16, c: '#c9903a', b: true },
+        { t: 'rect', x: 272, y: 204, w: 6, h: 10, c: '#3b2e24' },
+        { t: 'ell', x: 275, y: 196, rx: 26, ry: 18, c: 'rgba(255,196,120,0.20)' },
+        { t: 'rect', x: 528, y: 244, w: 58, h: 28, c: '#5a3a24', b: true },
+        { t: 'rect', x: 528, y: 252, w: 58, h: 4, c: '#c9903a' },
+        { t: 'rect', x: 550, y: 238, w: 14, h: 8, c: '#3b2e24', b: true },
+        { t: 'rect', x: 86, y: 176, w: 58, h: 10, c: '#c6bfae', b: true },
+        /* --- popředí --- */
+        { t: 'rect', x: 0, y: 0, w: 640, h: 18, c: '#1d1610', fg: true },
+        { t: 'poly', pts: [[0, 0], [22, 0], [16, 316], [0, 316]], c: '#171009', fg: true },
+      ],
+      onEnter: [
+        { if: { not: 'byla315' }, then: [
+          { flag: 'byla315' },
+          { say: 'Pokoj 315. Postel ustlaná, ale nikdo v ní nespal — jen si na ni někdo sedl a přemýšlel.' },
+        ] },
+      ],
+      hotspots: [
+        { id: 'stul', name: 'psací stůl', x: 330, y: 196, w: 124, h: 76, walkTo: [388, 296],
+          look: [{ if: { not: 'uctenkaNalezena' },
+            then: [{ say: 'Na stole leží účtenka. Papír je tenký a tištěný jinak než u nás.' }],
+            else: [{ say: 'Prázdný stůl. Popelník, do kterého nikdo neklepal.' }] }],
+          use: [{ if: 'uctenkaNalezena', then: [{ say: 'Nic dalšího tu není.' }], else: [
+            { get: 'uctenka', silent: true },
+            { say: '„Bar Rendez-vous, Kanada.“ Včerejší datum. Dvě whisky a telefon.' },
+            { flag: 'uctenkaNalezena' },
+          ] }] },
+        { id: 'kos', name: 'odpadkový koš', x: 476, y: 224, w: 48, h: 50, walkTo: [494, 298],
+          look: [{ if: { not: 'paskaNalezena' },
+            then: [{ say: 'V koši je zmuchlaná lepicí páska. Na lepivé straně se něco lesklo.' }],
+            else: [{ say: 'Zbytek koše je poctivě nezajímavý.' }] }],
+          use: [{ if: 'paskaNalezena', then: [{ say: 'Víc v něm není.' }], else: [
+            { say: 'Rukavice se hodí. Pásku vyndám za rohy, abych ji nezničila.' },
+            { get: 'paska', silent: true },
+            { say: 'Na lepivé straně je krásný otisk palce. Někdo tu něco odlepil a spěchal.' },
+            { flag: 'paskaNalezena' },
+          ] }] },
+        { id: 'kniha', name: 'kniha na stolku', x: 254, y: 196, w: 56, h: 40, walkTo: [282, 296],
+          look: [
+            { say: 'Na nočním stolku leží Tajná historie od Donny Tarttové. Záložka někde ve dvou třetinách.' },
+            { say: 'Na patitulu je tužkou: „Kniha, kterou jsem dočetl za jedinou noc. Doporučuji každému, kdo ještě věří, že se ve skupině studentů nemůže nic stát. Zapsáno, Diane.“' },
+            { say: 'Takže tady Cooper spal. Nebo aspoň četl.' },
+          ] },
+        { id: 'postel', name: 'postel', x: 50, y: 150, w: 196, h: 120, walkTo: [150, 298],
+          look: [{ say: 'Ustlaná postel. Na přehozu je důlek po někom, kdo si sedl a dlouho nevstal.' }] },
+        { id: 'okno315', name: 'okno', x: 400, y: 52, w: 180, h: 116, walkTo: [470, 292],
+          look: [{ say: 'Odsud je vidět les. Z týhle výšky vypadá jako dav, co čeká, až někdo něco řekne.' }] },
+        { id: 'ven315', name: 'zpět na chodbu', x: 0, y: 130, w: 44, h: 146, exit: 'chodba',
+          walkTo: [64, 298], exitAt: [494, 300] },
+      ],
+    },
+  });
+})();
+
+/* ============== ŠERIFOVA STANICE, LOG LADY, LES, ZÁVĚR ============== */
+(function () {
+  const TP = window.TP;
+  const P = TP.data.puzzles;
+  const WOOD = '#5a4636', WOOD_D = '#3b2e24';
+
+  Object.assign(TP.data.rooms, {
+    stanice: {
+      id: 'stanice', name: 'Šerifova stanice', bg: 'bg_stanice', music: 'town',
+      start: [110, 296], walk: [[52, 280], [604, 280], [608, 308], [48, 308]],
+      scale: [280, 0.9, 308, 1.06],
+      atmo: {
+        lights: [[180, 40, 200, '214,228,232', 0.22], [470, 40, 200, '214,228,232', 0.20]],
+        wash: 'rgba(30,40,36,0.10)', vignette: 0.42,
+      },
+      art: [
+        { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#2b2a24' },
+        { t: 'plaster', x: 0, y: 0, w: 640, h: 280, c: '#98a08b', n: 44 },
+        { t: 'grad', x: 0, y: 0, w: 640, h: 280, c1: 'rgba(0,0,0,0.20)', c2: 'rgba(0,0,0,0.04)' },
+        { t: 'rect', x: 0, y: 196, w: 640, h: 8, c: '#4d5346' },
+        { t: 'rect', x: 0, y: 204, w: 640, h: 76, c: '#5f6a55' },
+        /* nástěnka */
+        { t: 'rect', x: 296, y: 64, w: 132, h: 84, c: '#8a6a3a' },
+        { t: 'rect', x: 302, y: 70, w: 120, h: 72, c: '#a8895a' },
+        { t: 'rect', x: 310, y: 78, w: 30, h: 24, c: '#e4ddc8' },
+        { t: 'rect', x: 348, y: 78, w: 30, h: 24, c: '#e4ddc8' },
+        { t: 'rect', x: 386, y: 78, w: 26, h: 20, c: '#d8cba8' },
+        { t: 'rect', x: 310, y: 110, w: 60, h: 24, c: '#d8cba8' },
+        /* vlajka a hodiny */
+        { t: 'rect', x: 470, y: 60, w: 10, h: 96, c: '#6b4a3a' },
+        { t: 'poly', pts: [[480, 62], [540, 74], [480, 94]], c: '#7a2f34' },
+        { t: 'ell', x: 236, y: 88, rx: 20, ry: 20, c: '#d8cba8' },
+        { t: 'ell', x: 236, y: 88, rx: 16, ry: 16, c: '#efe7d8' },
+        { t: 'line', x1: 236, y1: 88, x2: 236, y2: 78, c: '#2a231d', w: 2 },
+        { t: 'line', x1: 236, y1: 88, x2: 244, y2: 92, c: '#2a231d', w: 2 },
+        /* Lucyin stůl */
+        { t: 'rect', x: 62, y: 226, w: 186, h: 16, c: '#7a5a3a', z: 278 },
+        { t: 'rect', x: 62, y: 242, w: 186, h: 34, c: '#4f3b28', z: 278 },
+        { t: 'rect', x: 74, y: 206, w: 30, h: 20, c: '#2a2f33', z: 279 },
+        { t: 'rect', x: 78, y: 210, w: 22, h: 12, c: '#6b8f7a', z: 279 },
+        { t: 'rect', x: 196, y: 212, w: 28, h: 14, c: '#d9dcdb', if: { not: 'kapesnikVzat' }, z: 279 },
+        { t: 'rect', x: 202, y: 206, w: 10, h: 8, c: '#efe7d8', if: { not: 'kapesnikVzat' }, z: 279 },
+        { t: 'rect', x: 120, y: 214, w: 44, h: 12, c: '#c66f92', z: 279 },
+        /* skříňka */
+        { t: 'rect', x: 536, y: 168, w: 88, h: 108, c: '#55606b' },
+        { t: 'rect', x: 542, y: 176, w: 76, h: 30, c: '#46505a' },
+        { t: 'rect', x: 542, y: 212, w: 76, h: 30, c: '#46505a' },
+        { t: 'rect', x: 542, y: 248, w: 76, h: 22, c: '#46505a' },
+        { t: 'rect', x: 572, y: 188, w: 16, h: 4, c: '#c9b26a' },
+        /* dveře ven */
+        { t: 'rect', x: 0, y: 128, w: 46, h: 148, c: WOOD },
+        { t: 'rect', x: 6, y: 136, w: 34, h: 60, c: '#9aa7ab' },
+        { t: 'text', x: 23, y: 216, s: 'ven', c: '#c9903a', size: 8, align: 'center' },
+        /* podlaha */
+        { t: 'rect', x: 0, y: 280, w: 640, h: 36, c: '#4a4438' },
+        { t: 'stripes', x: 0, y: 280, w: 640, h: 36, c: 'rgba(0,0,0,0.16)', gap: 30, thick: 3 },
+
+        /* --- detaily stanice --- */
+        { t: 'rect', x: 262, y: 200, w: 30, h: 76, c: '#8d9aa0', b: true },
+        { t: 'rect', x: 266, y: 176, w: 22, h: 28, c: '#a8d0dc', b: true },
+        { t: 'rect', x: 268, y: 244, w: 18, h: 4, c: '#4a5257' },
+        { t: 'rect', x: 392, y: 246, w: 76, h: 30, c: '#6b5540', b: true },
+        { t: 'rect', x: 396, y: 240, w: 68, h: 8, c: '#7a6349', b: true },
+        { t: 'rect', x: 556, y: 152, w: 20, h: 16, c: '#2a2f33', b: true },
+        { t: 'rect', x: 578, y: 154, w: 12, h: 12, c: '#a81c22', b: true },
+        { t: 'ell', x: 356, y: 306, rx: 13, ry: 5, c: '#4a5257' },
+        { t: 'ell', x: 356, y: 305, rx: 9, ry: 3, c: '#2a2f33' },
+        { t: 'rect', x: 216, y: 128, w: 40, h: 26, c: '#8a6a3a', b: true },
+        { t: 'rect', x: 220, y: 132, w: 32, h: 18, c: '#d8cba8' },
+        { t: 'text', x: 236, y: 136, s: 'HLEDÁ SE', c: '#7a2f34', size: 5, align: 'center' },
+        /* --- popředí: zářivky a rám --- */
+        { t: 'rect', x: 0, y: 0, w: 640, h: 14, c: '#3a3f36', fg: true },
+        { t: 'rect', x: 150, y: 14, w: 96, h: 8, c: '#c6cbc9', fg: true },
+        { t: 'rect', x: 150, y: 22, w: 96, h: 3, c: '#8f938d', fg: true },
+        { t: 'rect', x: 404, y: 14, w: 96, h: 8, c: '#c6cbc9', fg: true },
+        { t: 'rect', x: 404, y: 22, w: 96, h: 3, c: '#8f938d', fg: true },
+        { t: 'poly', pts: [[640, 0], [612, 0], [618, 316], [640, 316]], c: '#232720', fg: true },
+      ],
+      hotspots: [
+        { id: 'lucy', actor: 'lucy', x: 176, y: 240, facing: 1, walkTo: [180, 292], face: 'left',
+          talk: [{ dialog: 'lucy' }],
+          look: [{ say: 'Lucy. Drží stanici, telefon i Andyho. Dneska drží hlavně novou kabelku.' }] },
+        { id: 'andy', actor: 'andy', x: 300, y: 292, facing: -1, walkTo: [272, 300], face: 'right',
+          talk: [{ dialog: 'andy' }],
+          look: [{ if: 'andyUklidnen',
+            then: [{ say: 'Andy. Oči má ještě červené, ale už zase vypadá jako zástupce šerifa.' }],
+            else: [{ say: 'Andy. Statečně se snaží nebrečet, což je u Andyho velmi hlasitá činnost.' }] }],
+          useWith: { kapesnik: [
+            { if: 'andyUklidnen', then: [{ say: 'Andy už jeden má. Dva by ho zmátly.' }], else: [
+              { say: 'Podám Andymu kapesník. Beze slova — slova by to zhoršila.' },
+              { drop: 'kapesnik' },
+              { by: 'andy', say: 'Děkuju… Já jenom… ona ta kabelka je opravdu lososová.' },
+              { flag: 'andyUklidnen' },
+              { by: 'andy', say: 'Jestli něco potřebuješ, Lucy ti to dá. Řekni, že tě posílám já.' },
+            ] },
+          ] } },
+        { id: 'hawk', actor: 'hawk', x: 466, y: 288, facing: -1, walkTo: [436, 300], face: 'right',
+          talk: [{ dialog: 'hawk' }],
+          look: [{ say: 'Hawk. Stojí, jako by poslouchal něco za zdí. Možná poslouchá.' }] },
+        { id: 'lyra', actor: 'lyra', x: 366, y: 302, facing: 1, walkTo: [352, 304], face: 'right',
+          talk: [{ dialog: 'lyra' }],
+          look: [{ say: 'Pes. Na obojku vyryté: LYRA. Kouká na mě, jako by věděla, jak to dopadne.' }] },
+        { id: 'kapesnik', name: 'krabice s kapesníky', x: 190, y: 202, w: 44, h: 28, walkTo: [206, 292],
+          if: { not: 'kapesnikVzat' }, verb: 'take',
+          look: [{ say: 'Krabice kapesníků na rohu stolu. Poloprázdná. Na téhle stanici spotřební materiál.' }],
+          use: [{ get: 'kapesnik' }, { flag: 'kapesnikVzat' }] },
+        { id: 'skrinka', name: 'skříňka s technikou', x: 536, y: 168, w: 88, h: 108, walkTo: [560, 296],
+          look: [{ say: 'Skříňka s technikou. Souprava na otisky leží hned navrchu — a je zamčená.' }],
+          use: [{ if: { has: 'souprava' }, then: [{ say: 'Soupravu mám. Zbytek nechám být.' }], else: [
+            { say: 'Zamčeno. Klíč má Lucy a Lucy má dneska jiné starosti.' },
+          ] }] },
+        { id: 'nastenka', name: 'nástěnka', x: 296, y: 64, w: 132, h: 84, walkTo: [360, 292],
+          look: [{ say: 'Hledané osoby, rozpis služeb a fotka psa s nápisem ZAMĚSTNANEC MĚSÍCE.' },
+                 { say: 'Na fotce je Lyra. Podle data ho vyhrála i minulý měsíc.' }] },
+        { id: 'hodiny', name: 'hodiny', x: 216, y: 68, w: 40, h: 40, walkTo: [230, 292],
+          look: [{ say: 'Hodiny jdou o dvě minuty napřed. Lucy říká, že je tak nastavil Hawk a že to má důvod.' }] },
+        { id: 'ven_stanice', name: 'ven do města', x: 0, y: 128, w: 46, h: 148, exit: 'mapa', walkTo: [66, 298] },
+      ],
+    },
+
+    chatka: {
+      id: 'chatka', name: 'Chatka u lesa', bg: 'bg_chatka', music: 'woods',
+      start: [96, 294], walk: [[46, 274], [596, 274], [600, 308], [42, 308]],
+      scale: [274, 0.88, 308, 1.04],
+      atmo: {
+        lights: [[104, 214, 190, '255,150,60', 0.36], [430, 100, 150, '198,214,214', 0.16]],
+        wash: 'rgba(72,34,6,0.14)', vignette: 0.54,
+      },
+      art: [
+        { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#2a2119' },
+        { t: 'wood', x: 0, y: 0, w: 640, h: 274, c: '#6b5a43', plank: 22 },
+        { t: 'grad', x: 0, y: 0, w: 640, h: 274, c1: 'rgba(0,0,0,0.30)', c2: 'rgba(0,0,0,0.02)' },
+        /* okno do mlhy */
+        { t: 'rect', x: 372, y: 62, w: 130, h: 92, c: WOOD_D },
+        { t: 'grad', x: 378, y: 68, w: 118, h: 80, c1: '#8d9aa0', c2: '#b9c2bc' },
+        { t: 'trees', x: 378, y: 100, w: 118, h: 48, c: '#1b2f1f', c2: '#14241a', n: 5, tw: 26 },
+        { t: 'rect', x: 434, y: 68, w: 4, h: 80, c: WOOD_D },
+        /* kamna */
+        { t: 'rect', x: 66, y: 168, w: 74, h: 106, c: '#2f3338' },
+        { t: 'rect', x: 78, y: 200, w: 50, h: 34, c: '#1a1d20' },
+        { t: 'poly', pts: [[88, 232], [102, 206], [116, 232]], c: '#c9532a' },
+        { t: 'rect', x: 92, y: 92, w: 20, h: 78, c: '#3a4046' },
+        /* police s knihou */
+        { t: 'rect', x: 210, y: 150, w: 130, h: 8, c: WOOD },
+        { t: 'rect', x: 222, y: 128, w: 12, h: 22, c: '#6b4a2f' },
+        { t: 'rect', x: 236, y: 132, w: 10, h: 18, c: '#55606b' },
+        { t: 'rect', x: 252, y: 126, w: 14, h: 24, c: '#2f5d3a' },
+        { t: 'rect', x: 252, y: 126, w: 14, h: 4, c: '#c9b26a' },
+        { t: 'rect', x: 274, y: 136, w: 40, h: 14, c: '#8a5f33' },
+        /* stůl s polínkem */
+        { t: 'rect', x: 286, y: 224, w: 150, h: 12, c: '#7a5a3a' },
+        { t: 'rect', x: 296, y: 236, w: 10, h: 38, c: '#4f3b28' },
+        { t: 'rect', x: 416, y: 236, w: 10, h: 38, c: '#4f3b28' },
+        { t: 'rect', x: 316, y: 206, w: 84, h: 20, c: '#a8794a' },
+        { t: 'ell', x: 316, y: 216, rx: 8, ry: 10, c: '#c79a68' },
+        { t: 'ell', x: 400, y: 216, rx: 8, ry: 10, c: '#c79a68' },
+        { t: 'rect', x: 300, y: 218, w: 122, h: 8, c: '#efe7d8', alpha: 0.35 },
+        /* obětiny na stole */
+        { t: 'rect', x: 306, y: 196, w: 14, h: 10, c: '#d9dcdb', if: 'obetZanechane' },
+        { t: 'rect', x: 330, y: 198, w: 18, h: 8, c: '#c9903a', if: 'obetOdebrane' },
+        { t: 'rect', x: 360, y: 194, w: 20, h: 12, c: '#a81c22', if: 'obetDarovane' },
+        /* dveře */
+        { t: 'rect', x: 528, y: 126, w: 70, h: 148, c: WOOD },
+        { t: 'rect', x: 536, y: 134, w: 54, h: 132, c: '#4b3a2a' },
+        { t: 'ell', x: 580, y: 206, rx: 4, ry: 4, c: '#c9903a' },
+        /* podlaha */
+        { t: 'rect', x: 0, y: 268, w: 640, h: 8, c: '#2f251d' },
+        { t: 'rect', x: 0, y: 276, w: 640, h: 40, c: '#6d5136' },
+        { t: 'stripes', x: 0, y: 276, w: 640, h: 40, c: 'rgba(0,0,0,0.22)', gap: 30, thick: 3 },
+        { t: 'ell', x: 200, y: 300, rx: 70, ry: 14, c: '#7a3f3a' },
+        { t: 'ell', x: 200, y: 300, rx: 54, ry: 9, c: '#9a5a4a' },
+
+        /* --- detaily chatky --- */
+        { t: 'rect', x: 84, y: 156, w: 38, h: 14, c: '#2f3338', b: true },
+        { t: 'rect', x: 92, y: 148, w: 8, h: 10, c: '#4a5257' },
+        { t: 'rect', x: 148, y: 236, w: 44, h: 38, c: '#5a3a24', b: true },
+        { t: 'ell', x: 158, y: 236, rx: 6, ry: 5, c: '#7a5a3a' },
+        { t: 'ell', x: 172, y: 236, rx: 6, ry: 5, c: '#6b4a2f' },
+        { t: 'ell', x: 184, y: 236, rx: 6, ry: 5, c: '#7a5a3a' },
+        { t: 'rect', x: 452, y: 176, w: 66, h: 12, c: '#4a3b2b', b: true },
+        { t: 'rect', x: 460, y: 188, w: 8, h: 26, c: '#6f8f5e' },
+        { t: 'rect', x: 478, y: 188, w: 8, h: 30, c: '#5f7a52' },
+        { t: 'rect', x: 496, y: 188, w: 8, h: 24, c: '#6f8f5e' },
+        { t: 'rect', x: 250, y: 246, w: 8, h: 28, c: '#3f3123' },
+        { t: 'rect', x: 278, y: 246, w: 8, h: 28, c: '#3f3123' },
+        { t: 'rect', x: 246, y: 238, w: 44, h: 9, c: '#6b543a', b: true },
+        { t: 'rect', x: 250, y: 208, w: 7, h: 32, c: '#4a3b2b', b: true },
+        { t: 'rect', x: 279, y: 208, w: 7, h: 32, c: '#4a3b2b', b: true },
+        { t: 'rect', x: 248, y: 208, w: 40, h: 7, c: '#5a4636', b: true },
+        { t: 'rect', x: 248, y: 222, w: 40, h: 5, c: '#4a3b2b', b: true },
+        /* --- popředí: krov a roh --- */
+        { t: 'rect', x: 0, y: 0, w: 640, h: 20, c: '#241a12', fg: true },
+        { t: 'poly', pts: [[0, 20], [640, 20], [640, 30], [0, 34]], c: '#2c2119', fg: true },
+        { t: 'rect', x: 300, y: 30, w: 8, h: 18, c: '#1d1712', fg: true },
+        { t: 'poly', pts: [[0, 0], [26, 0], [20, 316], [0, 316]], c: '#1a130e', fg: true },
+      ],
+      onEnter: [
+        { if: { not: 'byleVChatce' }, then: [
+          { flag: 'byleVChatce' },
+          { by: 'logLady', say: 'Čekala jsem někoho. Nevěděla jsem, že to budete vy, ale polínko vědělo, že to bude někdo.' },
+        ] },
+      ],
+      hotspots: [
+        { id: 'loglady', actor: 'logLady', x: 214, y: 292, facing: 1, walkTo: [230, 302], face: 'left',
+          talk: [{ dialog: 'loglady' }],
+          look: [{ say: 'Log Lady. Drží polínko jako někdo, kdo ví, že ho nedrží on.' }] },
+        { id: 'polinko', name: 'polínko', x: 300, y: 190, w: 124, h: 46, walkTo: [356, 296],
+          look: [{ if: 'polinkoPromluvilo',
+            then: [{ say: 'Polínko mlčí. Řeklo, co mělo.' }],
+            else: [{ say: 'Polínko leží na stole. Kůra na jedné straně ohořelá.' },
+                   { by: 'logLady', say: 'Něco zanechaného. Něco odebraného. Něco darovaného. Pak promluví.' }] }],
+          use: [{ if: 'polinkoPromluvilo',
+            then: [{ say: 'Nechám ho odpočívat.' }],
+            else: [{ say: 'Musím před něj položit tři věci. Zanechané, odebrané, darované.' }] }],
+          useWith: {
+            hrnek: P.obetuj('hrnek'),
+            paska: P.obetuj('paska'),
+            kolac: P.obetuj('kolac'),
+            diktafon: [{ by: 'logLady', say: 'Ten ne. Ten už nese cizí hlas. Dvakrát nést se nedá.' }],
+            zapisnik: [{ by: 'logLady', say: 'Cizí písmo. Polínko čte jen to, co se stalo, ne co si někdo zapsal.' }],
+            mouka: [{ by: 'logLady', say: 'Mouka je budoucí chleba. Budoucnost sem nepatří.' }],
+            uctenka: [{ by: 'logLady', say: 'Papír z jiné země. Polínko nemá rádo hranice.' }],
+          } },
+        { id: 'kniha_stoner', name: 'kniha na polici', x: 244, y: 120, w: 32, h: 34, walkTo: [262, 296],
+          look: [
+            { say: 'Na polici leží Stoner od Johna Williamse. Hřbet celý ohmataný.' },
+            { by: 'logLady', say: 'Toto polínko dnes odmítlo hořet. Zkoušela jsem ho s touhle knihou. Nechtělo to riskovat.' },
+            { say: 'Nechám ji tam, kde je.' },
+          ] },
+        { id: 'kamna', name: 'kamna', x: 66, y: 92, w: 74, h: 182, walkTo: [140, 300],
+          look: [{ say: 'V kamnech hoří. Dřevo praská v pravidelném rytmu, jako by odpovídalo.' }] },
+        { id: 'okno_chatka', name: 'okno', x: 372, y: 62, w: 130, h: 92, walkTo: [420, 292],
+          look: [{ say: 'Za oknem začíná les. Odsud vypadá jako jedna velká tmavá věc, ne jako stromy.' }] },
+        { id: 'ven_chatka', name: 'ven', x: 528, y: 126, w: 70, h: 148, exit: 'mapa', walkTo: [556, 300] },
+      ],
+    },
+
+    les: {
+      id: 'les', name: 'Les u Ghostwoodu', bg: 'bg_les', music: 'woods',
+      start: [70, 292], walk: [[40, 268], [600, 268], [608, 308], [34, 308]],
+      scale: [268, 0.84, 308, 1.04],
+      atmo: {
+        lights: [[320, 40, 320, '150,178,166', 0.16]],
+        wash: 'rgba(16,38,28,0.20)', vignette: 0.56,
+      },
+      art: [
+        { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#0f1a12' },
+        { t: 'grad', x: 0, y: 0, w: 640, h: 180, c1: '#4a5a52', c2: '#20302a' },
+        { t: 'trees', x: -20, y: 20, w: 700, h: 200, c: '#16261a', c2: '#122117', n: 14, tw: 64 },
+        { t: 'trees', x: -40, y: 60, w: 720, h: 200, c: '#0f1c13', c2: '#131f16', n: 9, tw: 90 },
+        { t: 'rect', x: 0, y: 252, w: 640, h: 64, c: '#2a2a1f' },
+        { t: 'grad', x: 0, y: 240, w: 640, h: 40, c1: 'rgba(141,154,160,0.22)', c2: 'rgba(141,154,160,0)' },
+        /* kmeny v popředí */
+        { t: 'rect', x: 40, y: 0, w: 34, h: 280, c: '#25190f' },
+        { t: 'rect', x: 560, y: 0, w: 44, h: 286, c: '#25190f' },
+        /* pařez */
+        { t: 'ell', x: 424, y: 284, rx: 46, ry: 14, c: '#6b4a2f' },
+        { t: 'rect', x: 378, y: 284, w: 92, h: 24, c: '#4f3520' },
+        { t: 'ell', x: 424, y: 284, rx: 36, ry: 10, c: '#8a5f33' },
+        { t: 'ell', x: 424, y: 284, rx: 22, ry: 6, c: '#6b4a2f' },
+        /* přehrávač na pařezu */
+        { t: 'rect', x: 436, y: 270, w: 30, h: 16, c: '#3a4046' },
+        { t: 'rect', x: 442, y: 274, w: 8, h: 8, c: '#8d9aa0' },
+        /* cesta */
+        { t: 'poly', pts: [[0, 308], [180, 264], [280, 264], [160, 316], [0, 316]], c: '#3a3528' },
+        { t: 'text', x: 92, y: 250, s: 'zpět', c: '#8d9aa0', size: 8, align: 'center' },
+
+        /* --- podrost a mlha --- */
+        { t: 'grad', x: 0, y: 150, w: 640, h: 80, c1: 'rgba(150,170,162,0)', c2: 'rgba(150,170,162,0.30)' },
+        { t: 'grad', x: 0, y: 214, w: 640, h: 60, c1: 'rgba(150,170,162,0.26)', c2: 'rgba(150,170,162,0)' },
+        { t: 'ell', x: 140, y: 268, rx: 34, ry: 9, c: '#24301f' },
+        { t: 'ell', x: 250, y: 262, rx: 26, ry: 7, c: '#1f2a1c' },
+        { t: 'ell', x: 520, y: 272, rx: 40, ry: 10, c: '#24301f' },
+        { t: 'ell', x: 596, y: 296, rx: 30, ry: 9, c: '#1f2a1c' },
+        { t: 'ell', x: 214, y: 292, rx: 22, ry: 7, c: '#3a3528' },
+        { t: 'poly', pts: [[96, 268], [116, 240], [126, 268]], c: '#26351f' },
+        { t: 'poly', pts: [[112, 268], [132, 236], [146, 268]], c: '#1f2c1a' },
+        { t: 'poly', pts: [[486, 272], [506, 244], [518, 272]], c: '#26351f' },
+        { t: 'ell', x: 300, y: 282, rx: 18, ry: 6, c: '#3f3a2c' },
+        { t: 'ell', x: 296, y: 280, rx: 10, ry: 4, c: '#4a4436' },
+        /* --- popředí: kmeny a kapradí --- */
+        { t: 'rect', x: 34, y: 0, w: 46, h: 316, c: '#1c1209', fg: true },
+        { t: 'stripes', x: 34, y: 0, w: 46, h: 316, c: 'rgba(0,0,0,0.45)', gap: 11, thick: 3, fg: true },
+        { t: 'rect', x: 556, y: 0, w: 56, h: 316, c: '#1c1209', fg: true },
+        { t: 'stripes', x: 556, y: 0, w: 56, h: 316, c: 'rgba(0,0,0,0.45)', gap: 13, thick: 3, fg: true },
+        { t: 'poly', pts: [[0, 316], [40, 268], [70, 316]], c: '#12190f', fg: true },
+        { t: 'poly', pts: [[26, 316], [86, 262], [116, 316]], c: '#0f150c', fg: true },
+        { t: 'poly', pts: [[600, 316], [560, 256], [640, 268]], c: '#0f150c', fg: true },
+        { t: 'poly', pts: [[0, 0], [120, 0], [40, 60]], c: '#101a12', fg: true },
+        { t: 'poly', pts: [[640, 0], [520, 0], [600, 54]], c: '#101a12', fg: true },
+      ],
+      onEnter: [
+        { if: { not: 'bylaVLese' }, then: [
+          { flag: 'bylaVLese' },
+          { say: 'Tohle je ten pařez z mapy. A na něm sedí muž, který si pouští kazetu, které nerozumí.' },
+        ] },
+      ],
+      hotspots: [
+        { id: 'jerry', actor: 'jerry', x: 410, y: 302, facing: -1, sitting: true, walkTo: [334, 302], face: 'right',
+          talk: [{ dialog: 'jerry' }],
+          look: [{ say: 'Jerry Horne. Sedí na pařezu v kabátě za víc, než je celý můj plat, a poslouchá šum.' }],
+          useWith: {
+            diktafon: [
+              { if: { not: 'jerryPriznal' }, then: [
+                { say: 'Ještě ne. Nejdřív chci slyšet, co k tomu řekne sám.' },
+              ], else: [
+                { say: 'Přetočím pásku a stisknu přehrávání. Pozpátku.' },
+                { sfx: 'tape' },
+                { music: 'red', reverse: true },
+                { fx: 'red', duration: 2600 },
+                { tint: 'red' },
+                { dialog: 'finale' },
+                { tint: null },
+                { go: 'diner2' },
+              ] },
+            ],
+            uctenka: [{ if: 'jerryPriznal', then: [{ say: 'To už jsme probrali.' }], else: [
+              { say: 'Ukážu mu účtenku z Kanady.' },
+              { by: 'jerry', say: 'To… to je z bary, kterou mám rád. Mají tam telefon, co funguje i ve čtyři ráno.' },
+              { flag: 'uctenkaUkazana' },
+            ] }] },
+        },
+        { id: 'prehravac', name: 'přehrávač', x: 432, y: 266, w: 40, h: 22, walkTo: [388, 304],
+          look: [{ say: 'Laciný přehrávač. Z reproduktoru jde jen šum — a Jerry ho poslouchá, jako by čekal na slovo.' }] },
+        { id: 'parez', name: 'pařez', x: 378, y: 290, w: 92, h: 20, walkTo: [352, 304],
+          look: [{ say: 'Pařez je starý. Letokruhy se dají počítat, ale v jednom místě se na rok zastavily.' }] },
+        { id: 'stromy', name: 'stromy', x: 100, y: 40, w: 240, h: 200, walkTo: [200, 292],
+          look: [{ say: 'Jedle. Mlha mezi nimi stojí na místě, i když vítr fouká.' }] },
+        { id: 'zpet_les', name: 'zpět po cestě', x: 0, y: 264, w: 200, h: 52, exit: 'mapa', walkTo: [90, 300] },
+      ],
+    },
+
+    diner2: {
+      id: 'diner2', name: 'Double R Diner — podvečer', bg: 'bg_diner2', music: 'diner',
+      start: [300, 294], walk: [[26, 274], [560, 274], [566, 308], [22, 308]],
+      scale: [274, 0.88, 308, 1.06],
+      atmo: {
+        lights: [[140, 60, 170, '255,196,120', 0.30], [534, 60, 150, '224,72,72', 0.16], [330, 210, 220, '255,186,110', 0.14]],
+        wash: 'rgba(40,18,30,0.18)', vignette: 0.54,
+      },
+      art: [
+        { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: '#1d1712' },
+        { t: 'plaster', x: 0, y: 0, w: 640, h: 164, c: '#8a7053', n: 40 },
+        { t: 'rect', x: 0, y: 156, w: 640, h: 6, c: '#c9b294' },
+        { t: 'rect', x: 0, y: 162, w: 640, h: 78, c: '#6e3a41' },
+        { t: 'rect', x: 26, y: 32, w: 186, h: 112, c: '#2f251d' },
+        { t: 'grad', x: 31, y: 37, w: 176, h: 102, c1: '#2c3a42', c2: '#131c22' },
+        { t: 'trees', x: 31, y: 76, w: 176, h: 63, c: '#0c1610', c2: '#0a1210', n: 7, tw: 30 },
+        { t: 'rect', x: 452, y: 36, w: 166, h: 54, c: '#221c18' },
+        { t: 'text', x: 535, y: 46, s: 'DOUBLE R', c: '#e0343a', size: 16, bold: true, align: 'center' },
+        { t: 'text', x: 535, y: 68, s: 'D I N E R', c: '#f0c060', size: 9, align: 'center' },
+        { t: 'grad', x: 0, y: 0, w: 640, h: 90, c1: 'rgba(240,192,96,0.16)', c2: 'rgba(240,192,96,0)' },
+        { t: 'wood', x: 0, y: 234, w: 528, h: 18, c: '#7a6349', plank: 18, z: 272 },
+        { t: 'rect', x: 0, y: 232, w: 528, h: 4, c: '#9aa09c', b: true, z: 272 },
+        { t: 'rect', x: 0, y: 252, w: 528, h: 20, c: '#5c3f32', z: 272 },
+        { t: 'stripes', x: 0, y: 252, w: 528, h: 20, c: 'rgba(0,0,0,0.24)', gap: 26, thick: 2, z: 272 },
+        { t: 'rect', x: 0, y: 268, w: 528, h: 5, c: '#2f251d', z: 272 },
+        /* police a lednička jako ráno, jen potmě */
+        { t: 'rect', x: 206, y: 146, w: 220, h: 7, c: '#55422c', b: true },
+        { t: 'rect', x: 216, y: 134, w: 13, h: 12, c: '#9ea19c', b: true },
+        { t: 'rect', x: 234, y: 134, w: 13, h: 12, c: '#9ea19c', b: true },
+        { t: 'rect', x: 252, y: 134, w: 13, h: 12, c: '#9ea19c', b: true },
+        { t: 'rect', x: 54, y: 148, w: 66, h: 92, c: '#8e918b', b: true },
+        { t: 'rect', x: 64, y: 166, w: 34, h: 28, c: '#c6bfae', b: true },
+        { t: 'rect', x: 118, y: 186, w: 48, h: 52, c: '#3a4045', b: true },
+        { t: 'rect', x: 126, y: 212, w: 22, h: 24, c: '#1d1713', b: true },
+        { t: 'rect', x: 300, y: 124, w: 52, h: 22, c: '#2c2720', b: true },
+        { t: 'text', x: 326, y: 129, s: 'DNES', c: '#b9ab8a', size: 7, align: 'center' },
+        { t: 'text', x: 326, y: 138, s: 'VIŠŇOVÝ', c: '#b0393d', size: 6, align: 'center' },
+        { t: 'rect', x: 324, y: 190, w: 72, h: 48, c: '#7c8287', alpha: 0.45 },
+        { t: 'poly', pts: [[334, 232], [352, 206], [370, 232]], c: '#a81c22' },
+        { t: 'rect', x: 324, y: 232, w: 72, h: 6, c: '#c9903a' },
+        { t: 'rect', x: 416, y: 226, w: 14, h: 10, c: '#d9dcdb', z: 273 },
+        { t: 'rect', x: 444, y: 224, w: 28, h: 12, c: '#4a5257', z: 273 },
+        { t: 'checker', x: 0, y: 272, w: 640, h: 44, c1: '#9fa5a2', c2: '#201914', size: 16 },
+        { t: 'checker', x: 528, y: 236, w: 112, h: 40, c1: '#9fa5a2', c2: '#201914', size: 16 },
+        { t: 'rect', x: 0, y: 0, w: 640, h: 316, c: 'rgba(20,10,6,0.18)' },
+
+        /* --- popředí: box a lampa jako ráno, jen studenější --- */
+        { t: 'rect', x: 0, y: 150, w: 52, h: 166, c: '#1b0f0e', fg: true },
+        { t: 'rect', x: 0, y: 150, w: 52, h: 10, c: '#281a16', fg: true },
+        { t: 'rect', x: 0, y: 238, w: 52, h: 12, c: '#2f1f1b', fg: true },
+        { t: 'poly', pts: [[52, 150], [62, 178], [62, 316], [52, 316]], c: '#150c0b', fg: true },
+        { t: 'rect', x: 138, y: 0, w: 6, h: 34, c: '#15100d', fg: true },
+        { t: 'poly', pts: [[118, 34], [164, 34], [176, 58], [106, 58]], c: '#241a14', fg: true },
+        { t: 'poly', pts: [[106, 58], [176, 58], [172, 62], [110, 62]], c: '#e8c46a', fg: true },
+      ],
+      onEnter: [
+        { wait: 700 },
+        { dialog: 'epilog' },
+      ],
+      hotspots: [
+        { id: 'cooper2', actor: 'cooper', x: 470, y: 282, facing: -1, walkTo: [430, 292], face: 'right',
+          talk: [{ dialog: 'epilog' }],
+          look: [{ say: 'Cooper. Drží hrnek oběma rukama, jako by ho zahříval on jeho.' }] },
+        { id: 'norma2', actor: 'norma', x: 200, y: 250, facing: 1, walkTo: [206, 286], face: 'left',
+          talk: [{ by: 'norma', say: 'Zítra v šest, Natálie. A zástěru si nech.' }],
+          look: [{ say: 'Norma utírá pult místo, které už je čisté. Taky přemýšlí.' }] },
+      ],
+    },
+  });
+})();
+
+  </script>
+
+  <script>
+/* src/engine/game.js */
+/* Jádro hry: smyčka, vstup, chůze, přechody místností, UI stavy. */
+(function () {
+  const TP = (window.TP = window.TP || {});
+  const U = TP.util;
+
+  const game = {
+    canvas: null, ctx: null, scale: 1,
+    mode: 'title',            // title | play | end
+    menuOpen: false,
+    room: null,
+    player: { x: 320, y: 300, tx: 320, ty: 300, walking: false, facing: 1, phase: 0 },
+    selected: null,
+    hoverText: '',
+    hoverChoice: -1,
+    hoverHotspot: null,
+    bubble: null,
+    fx: null,
+    tint: null,
+    fading: 0,
+    fadeState: null,
+    skipRequested: false,
+    actorAnim: {},
+    buttons: [],
+    choiceRects: [],
+    menuRects: [],
+    titleRects: [],
+    endText: null,
+    last: 0,
+
+    /* ---------- start ---------- */
+    init() {
+      this.canvas = document.getElementById('game');
+      this.ctx = this.canvas.getContext('2d');
+      this.ctx.imageSmoothingEnabled = false;
+      TP.assets.load(window.TP_MANIFEST, () => {});
+      this.bindInput();
+      this.resize();
+      window.addEventListener('resize', () => this.resize());
+      this.hasSave = TP.state.load();
+      this.mode = 'title';
+      this.last = performance.now();
+      requestAnimationFrame((t) => this.loop(t));
+    },
+
+    resize() {
+      const maxW = window.innerWidth, maxH = window.innerHeight;
+      let s = Math.min(maxW / TP.render.W, maxH / TP.render.H);
+      if (s >= 1) s = Math.floor(s);
+      this.scale = Math.max(0.2, s);
+      this.canvas.style.width = Math.round(TP.render.W * this.scale) + 'px';
+      this.canvas.style.height = Math.round(TP.render.H * this.scale) + 'px';
+    },
+
+    newGame() {
+      TP.state.reset();
+      this.selected = null;
+      TP.script.clear();
+      TP.dialogue.active = false;
+      this.mode = 'play';
+      this.menuOpen = false;
+      TP.audio.resume();
+      this.changeRoom('diner', null, 1, true);
+    },
+
+    continueGame() {
+      this.mode = 'play';
+      this.menuOpen = false;
+      TP.audio.resume();
+      const r = TP.data.rooms[TP.state.room] || TP.data.rooms.diner;
+      this.room = r;
+      this.player.x = TP.state.x; this.player.y = TP.state.y;
+      this.player.tx = this.player.x; this.player.ty = this.player.y;
+      this.player.walking = false;
+      this.actorAnim = {};
+      if (r.music) TP.audio.music(r.music);
+    },
+
+    /* ---------- místnosti ---------- */
+    changeRoom(id, at, facing, instant) {
+      const target = TP.data.rooms[id];
+      if (!target) { console.warn('Neznámá místnost:', id); return; }
+      const apply = () => {
+        this.room = target;
+        TP.state.room = id;
+        const pos = at || target.start || [320, 296];
+        this.player.x = pos[0]; this.player.y = pos[1];
+        this.player.tx = pos[0]; this.player.ty = pos[1];
+        this.player.walking = false;
+        if (facing) this.player.facing = facing;
+        this.actorAnim = {};
+        this.selected = null;
+        this.tint = null;
+        TP.state.x = this.player.x; TP.state.y = this.player.y;
+        TP.state.save();
+        if (target.music) TP.audio.music(target.music);
+        if (target.onEnter) TP.script.run(target.onEnter);
+      };
+      if (instant) { apply(); this.fading = 0; this.fadeState = null; return; }
+      this.fading = 1;
+      this.fadeState = { phase: 'out', t: 0, apply };
+    },
+
+    updateFade(dt) {
+      const f = this.fadeState;
+      if (!f) { this.fading = 0; return; }
+      f.t += dt;
+      const dur = 230;
+      if (f.phase === 'out') {
+        this.fadeAlpha = U.clamp(f.t / dur, 0, 1);
+        if (f.t >= dur) { f.apply(); f.phase = 'in'; f.t = 0; }
+      } else {
+        this.fadeAlpha = 1 - U.clamp(f.t / dur, 0, 1);
+        if (f.t >= dur) { this.fadeState = null; this.fading = 0; this.fadeAlpha = 0; }
+      }
+    },
+
+    scaleAt(y) {
+      const r = this.room;
+      if (!r || !r.scale) return 1;
+      const [yTop, sTop, yBot, sBot] = r.scale;
+      const t = U.clamp((y - yTop) / (yBot - yTop), 0, 1);
+      return U.lerp(sTop, sBot, t);
+    },
+
+    /* ---------- chůze ---------- */
+    walkTo(x, y) {
+      const r = this.room;
+      if (!r || r.noWalk) return;
+      const p = U.clampToPoly(x, y, r.walk);
+      this.player.tx = p[0]; this.player.ty = p[1];
+      this.player.walking = true;
+    },
+
+    updatePlayer(dt) {
+      const p = this.player;
+      if (!p.walking) { p.phase = 0; return; }
+      const sc = this.scaleAt(p.y);
+      const speed = 105 * sc * (dt / 1000);
+      const dx = p.tx - p.x, dy = p.ty - p.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d <= speed || d < 0.6) {
+        p.x = p.tx; p.y = p.ty; p.walking = false; p.phase = 0;
+      } else {
+        p.x += (dx / d) * speed;
+        p.y += (dy / d) * speed;
+        if (Math.abs(dx) > 1) p.facing = dx > 0 ? 1 : -1;
+        p.phase += dt / 70;
+      }
+      TP.state.x = p.x; TP.state.y = p.y; TP.state.facing = p.facing;
+    },
+
+    moveActor(id, to, hide) {
+      if (!this.actorAnim[id]) this.actorAnim[id] = {};
+      const a = this.actorAnim[id];
+      if (to) { a.tx = to[0]; a.ty = to[1]; }
+      if (hide !== undefined) a.hidden = !!hide;
+    },
+
+    /* ---------- hotspoty ---------- */
+    hotspots() {
+      const r = this.room;
+      if (!r) return [];
+      return (r.hotspots || []).filter((h) => h.if === undefined || TP.script.check(h.if));
+    },
+
+    hotspotRect(h) {
+      if (h.actor) {
+        const def = TP.data.actors[h.actor] || {};
+        const sc = this.scaleAt(h.y) * (h.scale || 1);
+        const hh = (def.height || 52) * sc;
+        const w = Math.max(24, hh * 0.5);
+        return { x: h.x - w / 2, y: h.y - hh, w, h: hh };
+      }
+      return { x: h.x, y: h.y, w: h.w, h: h.h };
+    },
+
+    /** Z překrývajících se hotspotů vyhrává ten menší (konkrétnější):
+        hrnek mouky na pultu je přednější než servírka za ním. */
+    hotspotAt(x, y) {
+      const list = this.hotspots();
+      let best = null, bestArea = Infinity;
+      for (let i = list.length - 1; i >= 0; i--) {
+        const h = list[i];
+        const r = this.hotspotRect(h);
+        if (!U.rectHit(x, y, r)) continue;
+        const area = r.w * r.h;
+        if (area < bestArea) { best = h; bestArea = area; }
+      }
+      return best;
+    },
+
+    verbFor(h) {
+      if (!h) return null;
+      if (h.verb) return h.verb;
+      if (h.exit) return 'go';
+      if (h.actor) return 'talk';
+      if (h.use) return 'use';
+      return 'look';
+    },
+
+    labelFor(h) {
+      if (!h) return '';
+      const name = h.name || (h.actor && TP.data.actors[h.actor] && TP.data.actors[h.actor].name) || '';
+      if (this.selected) {
+        const it = TP.data.items[this.selected] || {};
+        return 'Použít ' + (it.name || this.selected) + ' na: ' + name;
+      }
+      const v = this.verbFor(h);
+      const pref = v === 'go' ? 'Jít: ' : v === 'talk' ? 'Promluvit: ' : v === 'take' ? 'Vzít: '
+        : v === 'use' ? 'Použít: ' : 'Prohlédnout: ';
+      return pref + name;
+    },
+
+    /* ---------- interakce ---------- */
+    defaultLine(kind) {
+      const lines = {
+        look: ['Nic zvláštního.', 'Nic, co by teď pomohlo.', 'Vypadá to úplně obyčejně. Což v tomhle městě nic neznamená.'],
+        use: ['To nejde.', 'Tohle asi ne.', 'Nechám to být.'],
+        useWith: ['Tohle dohromady nedává smysl.', 'Ne. Ani trochu.', 'Zkusila jsem to. Nic.'],
+        far: ['Tam se nedostanu.'],
+      };
+      const arr = lines[kind] || lines.look;
+      return arr[Math.floor(Math.random() * arr.length)];
+    },
+
+    interact(h, verb) {
+      if (!h) return;
+      const ops = [];
+      if (h.walkTo && !this.room.noWalk) ops.push({ walkTo: h.walkTo });
+      if (h.face) ops.push({ face: h.face });
+      let body = null;
+      if (verb === 'look') body = h.look || [{ say: h.lookText || this.defaultLine('look') }];
+      else if (verb === 'go') {
+        if (h.blockedIf && TP.script.check(h.blockedIf)) body = h.blocked || [{ say: 'Tudy teď ne.' }];
+        else body = h.use || [{ go: h.exit, at: h.exitAt, facing: h.exitFacing }];
+      } else if (verb === 'talk') body = h.talk || h.use || [{ say: this.defaultLine('use') }];
+      else body = h.use || h.talk || h.look || [{ say: this.defaultLine('use') }];
+      TP.script.run(ops.concat(body));
+    },
+
+    useItemOn(itemId, h) {
+      const item = TP.data.items[itemId] || {};
+      const ops = [];
+      if (h.walkTo && !this.room.noWalk) ops.push({ walkTo: h.walkTo });
+      if (h.face) ops.push({ face: h.face });
+      let body = (h.useWith && h.useWith[itemId]) || (item.useOn && item.useOn[h.id]) || null;
+      if (!body) {
+        const target = h.name || '';
+        body = [{ say: item.failLine || this.defaultLine('useWith') }];
+        if (h.useWithFail) body = h.useWithFail;
+        void target;
+      }
+      this.selected = null;
+      TP.script.run(ops.concat(body));
+    },
+
+    combineItems(a, b) {
+      const ia = TP.data.items[a] || {}, ib = TP.data.items[b] || {};
+      const rec = (ia.combine && ia.combine[b]) || (ib.combine && ib.combine[a]);
+      this.selected = null;
+      if (rec) { TP.script.run(rec); return; }
+      TP.script.run([{ say: this.defaultLine('useWith') }]);
+    },
+
+    /* ---------- bubliny / efekty ---------- */
+    showBubble(who, text) {
+      const def = TP.data.actors[who] || {};
+      let x = 320, y = 120;
+      if (who === 'natalie') { x = this.player.x; y = this.player.y - (def.height || 52) * this.scaleAt(this.player.y) - 4; }
+      else {
+        const h = this.hotspots().find((s) => s.actor === who);
+        if (h) { x = h.x; y = h.y - (TP.data.actors[h.actor].height || 52) * this.scaleAt(h.y) * (h.scale || 1) - 4; }
+        else { x = 320; y = 90; }
+      }
+      this.bubble = { text, x, y, color: def.color || TP.render.pal.bone };
+    },
+
+    hideBubble() { this.bubble = null; },
+
+    startFx(type, dur) {
+      this.fx = { type, t: 0, dur, done: false };
+      if (type === 'red') TP.audio.sfx('sting');
+    },
+
+    endGame() {
+      this.mode = 'end';
+      TP.audio.music('red', true);
+    },
+
+    /* ---------- vstup ---------- */
+    bindInput() {
+      const c = this.canvas;
+      const toScene = (ev) => {
+        const r = c.getBoundingClientRect();
+        const px = (ev.clientX - r.left) / (r.width / TP.render.W);
+        const py = (ev.clientY - r.top) / (r.height / TP.render.H);
+        return { x: px, y: py };
+      };
+      c.addEventListener('contextmenu', (e) => e.preventDefault());
+      c.addEventListener('pointermove', (e) => {
+        const p = toScene(e);
+        this.updateHover(p.x, p.y);
+      });
+      c.addEventListener('pointerdown', (e) => {
+        TP.audio.resume();
+        const p = toScene(e);
+        this.pressPos = p;
+        this.pressTime = performance.now();
+        this.longDone = false;
+        if (e.button === 2) { this.longDone = true; this.click(p.x, p.y, true); }
+        this.longTimer = setTimeout(() => {
+          if (this.longDone) return;
+          this.longDone = true;
+          this.click(p.x, p.y, true);
+        }, 480);
+      });
+      c.addEventListener('pointerup', (e) => {
+        clearTimeout(this.longTimer);
+        if (this.longDone) { this.longDone = false; return; }
+        const p = toScene(e);
+        this.click(p.x, p.y, false);
+      });
+      c.addEventListener('pointerleave', () => { clearTimeout(this.longTimer); this.hoverText = ''; });
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { if (this.mode === 'play') this.menuOpen = !this.menuOpen; }
+        if (e.key === ' ' || e.key === 'Enter') this.skipRequested = true;
+      });
+    },
+
+    updateHover(x, y) {
+      this.hoverChoice = -1;
+      if (this.mode !== 'play') { this.hoverText = ''; return; }
+      if (TP.dialogue.active) {
+        this.choiceRects.forEach((r, i) => { if (U.rectHit(x, y, r)) this.hoverChoice = i; });
+        this.hoverText = '';
+        return;
+      }
+      if (y >= TP.render.BAR_Y) {
+        const id = this.invSlotAt(x, y);
+        const it = id && TP.data.items[id];
+        this.hoverText = it ? (this.selected && this.selected !== id
+          ? 'Použít ' + (TP.data.items[this.selected] || {}).name + ' na: ' + it.name
+          : 'Prohlédnout: ' + it.name) : '';
+        return;
+      }
+      const h = this.hotspotAt(x, y);
+      this.hoverHotspot = h;
+      this.hoverText = h ? this.labelFor(h) : (this.selected ? 'Použít ' + (TP.data.items[this.selected] || {}).name : '');
+    },
+
+    invSlotAt(x, y) {
+      const R = TP.render;
+      if (y < R.SLOT_Y || y > R.SLOT_Y + R.SLOT) return null;
+      for (let i = 0; i < 14; i++) {
+        const sx = R.SLOT_X + i * (R.SLOT + R.SLOT_GAP);
+        if (x >= sx && x <= sx + R.SLOT) return TP.state.inv[i] || null;
+      }
+      return null;
+    },
+
+    click(x, y, secondary) {
+      if (this.mode === 'title') { this.titleClick(x, y); return; }
+      if (this.mode === 'end') { this.mode = 'title'; TP.audio.music('diner'); return; }
+      if (this.menuOpen) { this.menuClick(x, y); return; }
+
+      if (TP.dialogue.active) {
+        if (TP.dialogue.choices.length) {
+          for (let i = 0; i < this.choiceRects.length; i++) {
+            if (U.rectHit(x, y, this.choiceRects[i])) { TP.dialogue.pick(i); return; }
+          }
+          return;
+        }
+        TP.dialogue.advance();
+        return;
+      }
+
+      if (TP.script.busy()) { this.skipRequested = true; return; }
+
+      // spodní lišta
+      if (y >= TP.render.BAR_Y) {
+        const btn = (this.buttons || []).find((b) => U.rectHit(x, y, b));
+        if (btn) {
+          TP.audio.sfx('click');
+          if (btn.id === 'sound') TP.audio.toggle();
+          else this.menuOpen = true;
+          return;
+        }
+        const id = this.invSlotAt(x, y);
+        if (!id) { this.selected = null; return; }
+        const item = TP.data.items[id] || {};
+        if (secondary) { this.selected = null; TP.script.run(item.look || [{ say: 'Obyčejná věc. Zatím.' }]); return; }
+        if (this.selected && this.selected !== id) { this.combineItems(this.selected, id); return; }
+        this.selected = this.selected === id ? null : id;
+        TP.audio.sfx('click');
+        return;
+      }
+
+      // scéna
+      const h = this.hotspotAt(x, y);
+      if (this.selected) {
+        if (h) this.useItemOn(this.selected, h);
+        else { this.selected = null; TP.script.run([{ say: this.defaultLine('useWith') }]); }
+        return;
+      }
+      if (h) { this.interact(h, secondary ? 'look' : this.verbFor(h)); return; }
+      if (secondary) { TP.script.run([{ say: this.defaultLine('look') }]); return; }
+      if (this.room && !this.room.noWalk) { this.walkTo(x, y); }
+    },
+
+    titleClick(x, y) {
+      for (const r of this.titleRects) {
+        if (U.rectHit(x, y, r)) {
+          TP.audio.resume();
+          if (r.id === 'new') this.newGame();
+          else if (r.id === 'continue') this.continueGame();
+          else if (r.id === 'sound') TP.audio.toggle();
+          return;
+        }
+      }
+    },
+
+    menuClick(x, y) {
+      for (const r of this.menuRects) {
+        if (U.rectHit(x, y, r)) {
+          TP.audio.sfx('click');
+          if (r.id === 'resume') this.menuOpen = false;
+          else if (r.id === 'sound') TP.audio.toggle();
+          else if (r.id === 'new') { this.menuOpen = false; this.newGame(); }
+          else if (r.id === 'title') { this.menuOpen = false; this.mode = 'title'; this.hasSave = true; }
+          return;
+        }
+      }
+      this.menuOpen = false;
+    },
+
+    /* ---------- smyčka ---------- */
+    loop(t) {
+      const dt = Math.min(64, t - this.last);
+      this.last = t;
+      this.update(dt);
+      this.draw();
+      requestAnimationFrame((tt) => this.loop(tt));
+    },
+
+    update(dt) {
+      if (this.mode !== 'play') return;
+      if (this.fadeState) this.updateFade(dt);
+      if (this.fx) {
+        this.fx.t += dt;
+        if (this.fx.t >= this.fx.dur) { this.fx.done = true; this.fx = null; }
+      }
+      if (!this.menuOpen) {
+        this.updatePlayer(dt);
+        TP.script.update(dt);
+      }
+      // animace vedlejších postav
+      Object.keys(this.actorAnim).forEach((id) => {
+        const a = this.actorAnim[id];
+        if (a.tx === undefined) return;
+        const h = this.hotspots().find((s) => s.actor === id);
+        if (!h) return;
+        if (a.x === undefined) { a.x = h.x; a.y = h.y; }
+        const dx = a.tx - a.x, dy = a.ty - a.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        const sp = 70 * (dt / 1000);
+        if (d <= sp) { a.x = a.tx; a.y = a.ty; a.arrived = true; }
+        else { a.x += (dx / d) * sp; a.y += (dy / d) * sp; a.phase = (a.phase || 0) + dt / 70; a.facing = dx > 0 ? 1 : -1; }
+      });
+    },
+
+    draw() {
+      const ctx = this.ctx, R = TP.render;
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, R.W, R.H);
+      if (this.mode === 'title') { TP.screens.title(ctx, this); ctx.restore(); return; }
+      if (this.mode === 'end') { TP.screens.end(ctx, this); ctx.restore(); return; }
+
+      const room = this.room;
+      if (room) {
+        const bg = room.bg && TP.assets.img(room.bg);
+        if (bg) ctx.drawImage(bg, 0, 0, R.W, R.SCENE_H);
+        R.layer(ctx, room.art, false, !!bg);
+        // postavy a kulisy s hloubkou (z) v jednom pořadí odzadu dopředu
+        const drawables = [];
+        if (!bg) {
+          (room.art || []).forEach((sh) => {
+            if (sh.z === undefined) return;
+            if (sh.if !== undefined && !TP.script.check(sh.if)) return;
+            drawables.push({ shape: sh, y: sh.z });
+          });
+        }
+        this.hotspots().forEach((h) => {
+          if (!h.actor) return;
+          const a = this.actorAnim[h.actor] || {};
+          if (a.hidden) return;
+          drawables.push({
+            def: TP.data.actors[h.actor] || {},
+            x: a.x !== undefined ? a.x : h.x,
+            y: a.y !== undefined ? a.y : h.y,
+            facing: a.facing || h.facing || 1,
+            sitting: h.sitting,
+            phase: a.phase || 0,
+            sc: (h.scale || 1),
+          });
+        });
+        if (!room.noWalk && !room.hidePlayer) {
+          drawables.push({
+            def: TP.data.actors.natalie, x: this.player.x, y: this.player.y,
+            facing: this.player.facing, phase: this.player.phase, sc: 1,
+          });
+        }
+        drawables.sort((a, b) => a.y - b.y);
+        drawables.forEach((d) => {
+          if (d.shape) R.shape(ctx, d.shape);
+          else R.actor(ctx, d.def, d.x, d.y, this.scaleAt(d.y) * d.sc, d.facing, d.phase, d.sitting);
+        });
+        R.atmosphere(ctx, room);
+        R.layer(ctx, room.art, true, !!(room.bg && TP.assets.img(room.bg)));
+      }
+
+      R.tint(ctx, this.tint);
+      R.fx(ctx, this.fx);
+      R.bubble(ctx, this.bubble);
+      if (!TP.dialogue.active) {
+        R.topBar(ctx, this.hoverText);
+        R.inventory(ctx, this);
+      } else {
+        R.dialogueBox(ctx, this);
+      }
+      R.fade(ctx, this.fadeAlpha || 0);
+      if (this.menuOpen) TP.screens.menu(ctx, this);
+      ctx.restore();
+    },
+  };
+
+  TP.game = game;
+  window.addEventListener('load', () => game.init());
+})();
+
+  </script>
+</body>
+</html>
